@@ -2,6 +2,7 @@
 
 > 维护日期：2026-10-22
 > 仓库： https://github.com/Gooddaybro/MES-SpringBoot
+> 本轮源码核对基线：`6348d20f38352e9237cc0dda8ce0cd7aec68f678`（master，2026-10-22）
 > 本文状态：架构梳理与改造规划（并非功能已完成的证明）
 > 核心原则：先验证代码和业务，再形成小型闭环，最后接入 AI；每次改动都保留记录、测试与提交号。
 
@@ -25,7 +26,7 @@
 | Web/页面 | Spring MVC、FreeMarker (.ftl)、Layui、jQuery、ECharts |
 | 持久化 | MyBatis-Plus 3.1.2、MySQL 8、Druid |
 | 登录权限 | Apache Shiro 1.4.0，用户/角色/菜单 |
-| 缓存/会话 | Ehcache；具备 Redis/Jedis 相关依赖与配置代码 |
+| 缓存/会话 | application.yml 默认选择 Ehcache，非 Redis 模式使用内存 SessionDAO；另有 Redis/Jedis 依赖与可选实现 |
 | 文档/工具 | Springfox Swagger 2.9.2、Hutool、Dockerfile |
 | 自动化测试 | 一个 Spring Boot 上下文启动测试；不能据此认定业务逻辑已被覆盖 |
 
@@ -47,15 +48,15 @@
 
 ### 1.3 当前请求链路
 
-\`\`\`mermaid
-flowchart LR
+```mermaid
+flowchart TD
   A[Layui / FreeMarker 页面] --> B[Spring MVC Controller]
   B --> C[Service / ServiceImpl]
   C --> D[MyBatis-Plus Mapper]
   D --> E[(MySQL)]
   B --> F[Result 或 FreeMarker 页面]
   G[Shiro 登录与权限] -.访问控制.-> B
-\`\`\`
+```
 
 项目根目录 mes/ 是 Maven 工程；Java 包根路径：mes/src/main/java/com/wangziyang/mes/；页面：mes/src/main/resources/templates/；前端静态资源：mes/src/main/resources/static/；SQL：scripts/sql/。
 
@@ -82,8 +83,10 @@ flowchart LR
 - Spring Boot 2.1.7、Java 8、Shiro 1.4.0、Springfox 2.9.2 等依赖较老。先建立可复现运行基线并做依赖安全审计，再安排兼容性升级；避免立即全量换框架导致业务学习中断。
 - ShiroConfig 中口令校验采用 MD5 多轮散列，并保留加盐 TODO；建议后续迁移到现代密码哈希，并设计历史账户兼容策略。
 - ShiroConfig 中对 /druid/** 的访问标为 anon；确认控制台是否暴露，生产环境应限制或禁用。
-- 工艺路线 Controller 的 /page 方法直接返回空的成功 Result；需要补齐或明确禁用该接口。
-- 工艺路线新增/修改存在 TODO；应增加重复工序、无效工序 ID、流程重排序、删除后关联一致性等测试。
+- `SpFlowOperRelationController` 的 `POST /basedata/flow/process/page` 直接返回空的成功 Result；需要补齐或明确禁用。不要与 `SpFlowController` 的 `POST /basedata/flow/page` 混淆，后者已有分页查询。
+- 工艺路线新增/修改存在 TODO；应增加重复工序、无效工序 ID、流程重排序、删除后关联一致性等测试。“至少两个工序”是当前实现限制，是否符合目标业务需另行决定。
+- 删除工艺路线目前在 Controller 中依次调用删除头表与关系表，未见覆盖两步的外层事务；建议迁入 Service 的同一事务，并检查物料引用。此处是静态检查发现的风险，尚未做运行复现。
+- `SpBomItem` 实体声明了 `sp_bom_item`，但本轮读取的 `MySQL-sparchetype_20200330.sql` 没有该表；BOM 查询落地前必须核对实际库与其他建表来源。
 - README 规划与源码落地存在差距；简历、答辩和日志只描述自己验证过的内容。
 - 仓库中可能存在旧数据库地址、账号等配置痕迹；对外展示、发布新环境前检查凭据，不要将真实密钥提交 Git。
 
@@ -98,7 +101,7 @@ flowchart LR
 | P2 | 工单管理与工序执行/过站记录 | 业务建模、事务、状态机 | 建工单→按顺序报工→完成；不能越站 |
 | P3 | 质检、不良、返工与追溯 | 复杂业务规则 | 不良记录→返工→复检→追踪到工单与工序 |
 | P4 | AI 异常归因辅助 + 质量知识 RAG | Agent + RAG + 工业场景 | 汇总真实缺陷记录，给出处；仅生成建议，不自动处置 |
-| P5 | 工程化：测试、鉴权、日志、压测、部署、必要的依赖升级 | 生产工程能力 | 关键路径自动测试与可复现部署 |
+| P5 | 工程化完善：压测、部署、依赖升级；测试、鉴权与日志从 P0/P1 起随功能落实 | 生产工程能力 | 关键路径自动测试与可复现部署 |
 
 每次只进入一个阶段的一个子任务；P1 可以先使用已有工艺数据，不需要虚构「已存在的工单/质检数据」。
 
@@ -108,7 +111,7 @@ flowchart LR
 
 旧版 Java 服务先保留 MES 业务主数据和规则；Python 使用熟悉的 LangGraph 搭建 AI 编排层，不将新式 AI SDK 硬塞入旧版 Java 8 工程。
 
-\`\`\`mermaid
+```mermaid
 flowchart TD
   U[Layui 聊天界面] --> J[Java MES 认证入口]
   J --> P[Python LangGraph Agent]
@@ -119,14 +122,14 @@ flowchart TD
   P --> R[可选 RAG: SOP/维修/质检说明文档]
   P --> J
   J --> U
-\`\`\`
+```
 
 实现时必须明确鉴权传播：用户身份、数据范围、接口白名单和超时限制要由后端校验，不能只依赖模型提示词。Agent 不直接连接数据库，不执行任意 SQL，不具备擅自修改工单/质检结果的工具。
 
-### 4.2 第一版只做两个 Tool
+### 4.2 第一版先做一个 Tool，BOM 作为后续扩展
 
 1. get_material_routing(materialCode)：由 Java 查询物料→flowId→工序关系（按 sortNum 排序），返回工艺步骤和数据库记录标识。
-2. get_bom(materialCode)：由 Java 查询匹配 BOM 及子项；实际字段映射、版本/状态过滤需先核对表结构与现有 Mapper。
+2. 后续候选 `get_bom(materialCode)`：由 Java 查询匹配 BOM 及子项；先补齐表结构验证，明确 `materielCode` 存物料 ID 还是编码，并确定工厂、版本与审核状态选择规则，再实施。当前不计入第一轮交付。
 
 工具对应的 Java API 是**待新增的服务接口**，不是仓库当前已有的接口。先通过 Postman/curl 测通，再接 Python Tool Calling，最后接页面。
 
@@ -143,12 +146,35 @@ flowchart TD
 - LangGraph：按问题路由、调用工具、整理可溯源回答，必要时人工审批。
 - MES Service：执行业务状态判断、事务、权限与字段级校验；**模型不成为业务规则的最终裁判**。
 
+### 4.4 第一项改造的具体边界（提案，待实现）
+
+**用户问题**：“物料编码为 DEMO-LOADER-001 的装载机，应该经过哪些工序？”此编码是示例，不代表库中已有记录。
+
+先写普通 Java 查询，再把同一个查询能力包装成 Tool；单工具阶段可以使用固定流程，不必为展示 Agent 增加多代理架构。已有 LangGraph 经验可以复用为“识别查询参数→调用工具→核对结果→回答”。
+
+| 项目 | 第一版约定 |
+| --- | --- |
+| 新接口（拟定） | `GET /api/assistant/material-routing?materialCode=...` |
+| 参数映射 | API 的 `materialCode` 对应现有 `SpMaterile.materiel`；`model` 是另一个字段 |
+| 查询关联 | 物料的 `flowId` → 路线 ID → 关系表 `flow_id` → 工序 `oper_id`；按 `sort_num` 升序 |
+| 返回内容 | 物料 ID/编码、路线 ID/编码、工序 ID/编码/名称/顺序、查询时间；不返回整张实体的全部字段 |
+| 状态过滤 | 核对实体、SQL 与真实库的状态含义；物料注释的正常值为 `01`，不可套用其他项目的 0/1 逻辑 |
+| 无数据处理 | 分清物料不存在、未绑定路线、路线失效、无工序；不得生成“通用工艺”冒充查询结果 |
+| 多条匹配 | 返回需要澄清的候选，不能默认取第一条；型号查询留待下一轮 |
+| 访问控制 | Java 检查登录、接口权限与数据范围；Python 仅使用受限的服务凭据和经过验证的用户上下文，不能相信模型提供的 userId |
+| 超时与错误 | 明确返回工具失败；不得把调用超时解释为“该物料没有工序” |
+| 第一轮验收 | 正常物料顺序正确；不存在/无路线有明确提示；越权被拒绝；工具超时不编造答案 |
+
+Java 建议新增 `assistant/controller`、`assistant/service`、`assistant/dto` 下的少量类，复用现有 Mapper。具体文件名在实施时确定。本轮不新建生产业务表。
+
+**判断 AI 是否有价值**：同一条查询既可通过页面完成，也可通过自然语言完成；比较是否减少查找步骤、答案是否与接口一致。接入模型本身不是成果，能解释并验证这条链路才是成果。
+
 ## 5. 装载机示例：未来的工单—工序—质检闭环
 
 场景：工厂接到 10 台装载机的生产订单。这里用「生产工单」表示制造任务，用「序列号/SN」区分每一台具体机器。
 
-\`\`\`mermaid
-flowchart LR
+```mermaid
+flowchart TD
   A[生产工单 10 台] --> B[引用工艺路线]
   B --> C[工序执行记录 / 过站]
   C --> D{质检是否合格}
@@ -157,13 +183,15 @@ flowchart LR
   F --> G[返工任务]
   G --> H[复检]
   H --> D
-\`\`\`
+```
 
 拟新增的最小数据模型（名称仅作讨论）：
 - mes_work_order：工单号、产品/物料、计划数量、状态、计划时间。
 - mes_work_order_operation：工单/单台 SN、工序、执行顺序、开始结束时间、执行状态。
 - mes_quality_inspection：工单/SN、工序、检验项、结果、检验时间、检验人。
 - mes_quality_defect：检验记录、不良类型、返工状态、闭环时间。
+
+上述为概念草图，实施前还需拆清工单数量与单台 SN：工单可以对应多台产品，每台产品要有独立执行实例；工序定义和实际执行记录不能共用一行。工单下达时应确定工艺版本或快照，避免后来修改工艺影响历史追溯。返工应追加执行/复检记录，不能覆盖原不良事实。
 
 **核心规则示例**：未完成上一工序不能过站；不良未闭环不能正常完工；同一 SN 的关键动作应有唯一性/幂等校验。先定义状态图和测试，再写 Controller。
 
@@ -192,6 +220,21 @@ flowchart LR
 - 验证：根据 GitHub master 静态阅读项目文件；**未连接用户本地数据库，未执行应用或测试**。
 - 下一步：P0 绘制实体关系，确定第一条 Java 只读工艺查询 API。
 - Git 提交：以该文档的 GitHub 文件历史为准。
+
+### 2026-10-22 · R001 · 复核架构并收敛第一项 AI 改造
+
+- 状态：**文档修订完成；业务与 AI 功能仍为计划中**。
+- 核对基线：`6348d20f38352e9237cc0dda8ce0cd7aec68f678`；读取完整仓库文件树、POM、工艺 Controller/Service/Mapper、物料/BOM 实体、Shiro 配置、主配置、页面、测试与 20200330 SQL 建表清单。
+- 修正：三处 Mermaid 代码围栏原有反斜杠导致不能正常识别，已修正；纵向布局便于阅读。
+- 澄清：空分页接口是 `/basedata/flow/process/page`；`/basedata/flow/page` 已有查询。默认缓存是 Ehcache，不能把 Redis 当作默认必需运行组件。
+- 新发现：读取的 SQL 快照没有 `sp_bom_item`；路线删除两步缺少可见的统一事务边界，需后续验证修复。
+- 决策：第一轮只做“按物料编码查询工艺路线”的 Java API 与一个 Tool；BOM 待建表和字段语义确认后再做。
+- 补充：输入字段映射、空结果/多匹配/越权/超时处理、验收条件；工单与单台 SN 的区分及工艺快照、返工留痕要求。
+- 修改文件：仅 `docs/MES_REFACTOR_JOURNAL.md`，保留 R000 历史。
+- 验证：静态代码核对与 Markdown 围栏/仓库相对链接检查；未启动应用，未运行 Java 测试，未连接用户本机数据库。
+- 回滚：可通过 Git 单独撤销此次文档提交。
+- Commit：以本文件 Git 历史中 `docs: refine MES architecture audit and first AI milestone` 的提交为准。
+- 下一步：用户先独立解释物料→路线→工序关系，再实现并验证 Java 只读查询接口。
 
 ### 后续日志模板（每次复制一段并填充）
 
