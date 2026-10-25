@@ -162,5 +162,9 @@
         });
     }
 </script>
+<!-- MES Assistant widget -->
+<link rel="stylesheet" href="${request.contextPath}/css/mes-assistant.css?v=1">
+<#include "${request.contextPath}/admin/assistant/widget.ftl">
+<script src="${request.contextPath}/js/mes-assistant.js?v=1"></script>
 </body>
 </html>

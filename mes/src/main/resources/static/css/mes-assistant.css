@@ -1,0 +1,24 @@
+.mes-ai-widget{position:fixed;right:24px;bottom:24px;z-index:9999;font-family:Arial,"Microsoft YaHei",sans-serif;color:#1e293b}
+.mes-ai-widget *{box-sizing:border-box}
+.mes-ai-launcher{border:0;border-radius:28px;background:#225fd2;color:white;padding:13px 21px;box-shadow:0 10px 30px #173c7840;cursor:pointer;font-size:14px}
+.mes-ai-panel{position:absolute;right:0;bottom:66px;width:390px;height:min(580px,calc(100vh - 110px));border:1px solid #dae3ef;border-radius:15px;background:#fff;box-shadow:0 16px 48px #142b4e38;overflow:hidden;display:flex;flex-direction:column}
+.mes-ai-panel[hidden]{display:none}
+.mes-ai-header{background:#173c78;color:white;padding:17px 16px;display:flex;justify-content:space-between;align-items:center}
+.mes-ai-header strong{display:block;font-size:15px}.mes-ai-header small{display:block;color:#d0dff9;font-size:11px;margin-top:5px}
+#mes-ai-close{background:transparent;color:white;font-size:24px;border:0;cursor:pointer}
+.mes-ai-messages{flex:1;overflow-y:auto;background:#f6f8fc;padding:16px 12px}
+.mes-ai-message{max-width:93%;padding:11px 12px;margin-bottom:12px;border-radius:12px;line-height:1.65;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mes-ai-bot{background:white;border:1px solid #e4eaf2;border-top-left-radius:3px;margin-right:auto}
+.mes-ai-user{background:#deebff;border-top-right-radius:3px;margin-left:auto}
+.mes-ai-steps{margin:10px 0 0 18px;padding:0}.mes-ai-steps li{margin:4px 0}
+.mes-ai-source{margin-top:10px;padding-top:7px;border-top:1px solid #e4eaf2;color:#718096;font-size:11px}
+.mes-ai-shortcuts{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px 0}
+.mes-ai-shortcuts button{border:1px solid #d8e4f4;background:#eff5ff;color:#265796;border-radius:20px;padding:5px 9px;font-size:11px;cursor:pointer}
+.mes-ai-shortcuts button:disabled{opacity:.5;cursor:wait}
+.mes-ai-form{display:flex!important;flex-direction:row!important;align-items:flex-end;gap:8px;margin:8px 12px 0;padding:8px;border:1px solid #d5dfed;border-radius:12px;background:white}
+.mes-ai-form:focus-within{border-color:#3979e0}
+#mes-ai-input{border:0;outline:none;box-shadow:none;resize:none;flex:1;min-width:0;min-height:44px;max-height:90px;background:white;font-size:13px;line-height:1.5}
+#mes-ai-send{border:0;border-radius:9px;background:#2463d4;color:white;width:37px;height:37px;cursor:pointer}
+#mes-ai-send:disabled{opacity:.5;cursor:wait}.mes-ai-hint{text-align:center;font-size:10px;color:#8391a5;margin:5px 0 10px}
+.mes-ai-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:600px){.mes-ai-widget{right:12px;bottom:12px}.mes-ai-panel{position:fixed;left:8px;right:8px;bottom:69px;width:auto;height:calc(100vh - 90px);max-height:650px}}
