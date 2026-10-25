@@ -236,6 +236,19 @@ flowchart TD
 - Commit：以本文件 Git 历史中 `docs: refine MES architecture audit and first AI milestone` 的提交为准。
 - 下一步：用户先独立解释物料→路线→工序关系，再实现并验证 Java 只读查询接口。
 
+### 2026-10-25 · R002 · 后台悬浮工艺查询助手与真实数据查询接口
+
+- 状态：**功能代码已提交到独立 feature 分支，静态审查完成；本地运行和测试待验证；未接入真实 LLM/LangGraph**。
+- 目标：在 MES 后台加入可随时打开的聊天窗，让用户按真实物料编码查询工艺路线。
+- 前端：修改 admin/index.ftl，引入独立 widget.ftl、mes-assistant.css、mes-assistant.js；支持快捷问句、发送、加载、错误提示、数据来源和响应式布局。
+- 后端：新增 MesAssistantController 与 MesAssistantService；提供 Shiro 保护的 POST /admin/assistant/chat；只读查询物料、流程和排序工序，缺失数据时不虚构。
+- 文档：新增 docs/MES_AI_ASSISTANT_UI.md，提供字符线框图、交互流程及验收项。
+- 测试：新增 MesAssistantServiceTest 单元测试源文件，覆盖无编码、无物料及有工序的基础流程。**未在用户实际环境运行，不能称为通过。**
+- 技术取舍：保留旧 Java 8 单体与 FreeMarker/Layui；先真实数据查询，之后由 LangGraph 取代规则意图判断。
+- 风险：目前仅登录保护，尚未校验细粒度的数据范围权限；MySQL 状态字段含义待核；没有配置模型服务，通用 AI 对话不可用。
+- Commit：参见 feature/mes-assistant-chat-ui 分支历史，代码提交为 8a7c98ea2ecbec2c42680ba7fb4916ba5d0de37f。
+- 下一步：本地 JDK8/Maven 运行、验证数据库与可视化界面；进一步接入 Python LangGraph Agent。
+
 ### 后续日志模板（每次复制一段并填充）
 
 #### YYYY-MM-DD · R00N · 变更主题
