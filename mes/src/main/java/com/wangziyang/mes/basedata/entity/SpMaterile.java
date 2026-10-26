@@ -59,7 +59,7 @@ public class SpMaterile extends BaseEntity {
     private String model;
 
     /**
-     * 状态(00:删除;01:正常;02:禁用)
+     * 状态(0:正常;1:删除;2:禁用)，与物料页面及数据库一致
      */
     @TableField(value = "is_deleted")
     private String deleted;
@@ -188,7 +188,7 @@ public class SpMaterile extends BaseEntity {
 
 
     /**
-     * 获取 状态(00:删除;01:正常;02:禁用)
+     * 获取 状态(0:正常;1:删除;2:禁用)
      *
      * @return deleted 状态(00:删除;01:正常;02:禁用)
      */
@@ -197,7 +197,7 @@ public class SpMaterile extends BaseEntity {
     }
 
     /**
-     * 设置 状态(00:删除;01:正常;02:禁用)
+     * 设置 状态(0:正常;1:删除;2:禁用)
      *
      * @param deleted 状态(00:删除;01:正常;02:禁用)
      */

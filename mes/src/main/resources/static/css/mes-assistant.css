@@ -1,0 +1,41 @@
+.mes-ai-widget { font: 14px/1.65 Arial, "Microsoft YaHei", sans-serif; color: #243746; }
+.mes-ai-widget * { box-sizing: border-box; }
+.mes-ai-widget button { font: inherit; cursor: pointer; }
+.mes-ai-widget button:disabled { opacity: .6; cursor: wait; }
+.mes-ai-widget button:focus-visible, .mes-ai-widget textarea:focus-visible { outline: 2px solid #00786f; outline-offset: 3px; }
+.mes-ai-widget .mes-ai-launcher { position: fixed; right: 24px; bottom: 24px; z-index: 1999; border: 0; border-radius: 24px; padding: 12px 20px; color: #fff; background: #007f75; box-shadow: 0 4px 20px #183b3433; }
+.mes-ai-widget .mes-ai-panel { position: fixed; top: 60px; right: 0; bottom: 0; z-index: 2000; width: 480px; max-width: 100%; display: flex; flex-direction: column; background: #fff; border-left: 1px solid #d7e1e5; box-shadow: -8px 0 32px #163b3426; }
+.mes-ai-widget .mes-ai-panel[hidden] { display: none; }
+.mes-ai-widget .mes-ai-header { flex-shrink: 0; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid #dce5e7; background: #eff8f6; }
+.mes-ai-widget .mes-ai-header strong { font-size: 18px; }
+.mes-ai-widget .mes-ai-header p { color: #435f66; font-size: 13px; margin: 2px 0 0; }
+.mes-ai-widget .mes-ai-actions { display: flex; gap: 6px; }
+.mes-ai-widget .mes-ai-actions button, .mes-ai-widget .mes-ai-copy { border: 1px solid #b9cdcc; border-radius: 5px; padding: 4px 9px; color: #285b55; background: #fff; font-size: 13px; }
+.mes-ai-widget .mes-ai-messages { flex: 1; min-height: 0; overflow: auto; padding: 18px 14px; background: #f4f7f8; user-select: text; }
+.mes-ai-widget .mes-ai-message { margin: 0 0 16px; padding: 12px; border: 1px solid #dbe5e8; border-radius: 10px; background: #fff; overflow-wrap: anywhere; }
+.mes-ai-widget .mes-ai-user { margin-left: 40px; background: #e3f3ef; border-color: #bfded6; }
+.mes-ai-widget .mes-ai-message-body { white-space: pre-wrap; }
+.mes-ai-widget .mes-ai-label { font-size: 12px; color: #486066; margin-bottom: 6px; }
+.mes-ai-widget .mes-ai-material { margin-top: 10px; padding: 9px; background: #f0f7f6; border-radius: 5px; white-space: pre-wrap; }
+.mes-ai-widget .mes-ai-table-wrap { overflow-x: auto; margin: 10px 0; }
+.mes-ai-widget .mes-ai-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mes-ai-widget .mes-ai-table th, .mes-ai-widget .mes-ai-table td { padding: 7px; border: 1px solid #dce5e7; text-align: left; white-space: normal; }
+.mes-ai-widget .mes-ai-table th { background: #f0f7f6; font-weight: 600; }
+.mes-ai-widget .mes-ai-evidence { margin: 10px 0; font-size: 12px; color: #405c64; }
+.mes-ai-widget .mes-ai-evidence summary { cursor: pointer; color: #006c62; font-size: 13px; }
+.mes-ai-widget .mes-ai-evidence pre { font: inherit; white-space: pre-wrap; margin-top: 7px; overflow-wrap: anywhere; }
+.mes-ai-widget .mes-ai-copy { margin: 5px 6px 0 0; }
+.mes-ai-widget .mes-ai-clipboard { position: fixed; left: -9999px; width: 1px; height: 1px; }
+.mes-ai-widget .mes-ai-shortcuts { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 14px 4px; }
+.mes-ai-widget .mes-ai-shortcuts button { background: #eff8f6; color: #006c62; border: 1px solid #c8ded9; border-radius: 16px; padding: 4px 10px; font-size: 13px; }
+.mes-ai-widget .mes-ai-form { display: block; flex-shrink: 0; margin: 0; padding: 8px 14px 0; }
+.mes-ai-widget .mes-ai-form label { display: block; margin-bottom: 5px; color: #435f66; font-size: 13px; }
+.mes-ai-widget .mes-ai-composer { display: flex; gap: 8px; align-items: flex-end; }
+.mes-ai-widget #mes-ai-input { flex: 1; width: 0; min-width: 0; min-height: 76px; max-height: 160px; resize: vertical; border: 1px solid #b6c9cb; border-radius: 7px; padding: 9px; font: 14px/1.6 Arial, "Microsoft YaHei", sans-serif; color: #243746; background: #fff; user-select: text; }
+.mes-ai-widget #mes-ai-send { border: 0; border-radius: 6px; background: #007f75; color: #fff; padding: 8px 12px; }
+.mes-ai-widget .mes-ai-feedback { min-height: 20px; margin: 4px 14px 0; font-size: 12px; color: #9c3b20; }
+.mes-ai-widget .mes-ai-hint { margin: 0; padding: 2px 14px 12px; text-align: center; font-size: 12px; color: #486066; }
+@media (max-width: 640px) {
+    .mes-ai-widget .mes-ai-panel { top: 0; width: 100%; }
+    .mes-ai-widget .mes-ai-launcher { right: 14px; bottom: 16px; }
+}

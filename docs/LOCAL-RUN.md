@@ -1,5 +1,7 @@
 # 本地启动与运行验证
 
+> 2026-10-26：助手接入、专用权限、完整构建测试与其他机器启动请看 [AI助手接入与运行指南](AI助手接入与运行指南.md)。代码变化后使用 `Start-Local.ps1 -Rebuild` 重新构建；下文验证记录为早期环境基线。
+
 配置日期：2026-10-20。项目来自 https://github.com/wangziyang6/MES-SpringBoot ，基线提交 `64e84cac6b4fa2f95f687422d97e2b820de3755f`。原分支为 master，原 Java 业务代码、POM 与 SQL 文件未修改。
 
 ## 启动

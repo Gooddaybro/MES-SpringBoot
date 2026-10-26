@@ -162,5 +162,8 @@
         });
     }
 </script>
+<link rel="stylesheet" href="${request.contextPath}/css/mes-assistant.css?v=2">
+<#include "/admin/assistant/widget.ftl">
+<script src="${request.contextPath}/js/mes-assistant.js?v=2"></script>
 </body>
 </html>

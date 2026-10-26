@@ -1,3 +1,4 @@
+param([string]$MySqlHome = 'D:\Program Files\mysql-8.0.46-winx64')
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $runtime = Join-Path $repo '.local'
@@ -23,7 +24,7 @@ if (Test-Path -LiteralPath $redisCli) {
         }
     }
 }
-$mysqlAdmin = 'D:\Program Files\mysql-8.0.46-winx64\bin\mysqladmin.exe'
+$mysqlAdmin = Join-Path $MySqlHome 'bin\mysqladmin.exe'
 $rootConfig = Join-Path $runtime 'mysql-root.ini'
 if (Test-Path -LiteralPath $rootConfig) {
     $mysqlPidFile = Join-Path $runtime 'mysql.pid'

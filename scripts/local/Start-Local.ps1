@@ -1,6 +1,7 @@
 param(
     [string]$JdkHome = 'D:\Program Files\Java\jdk1.8.0_202',
-    [string]$MySqlHome = 'D:\Program Files\mysql-8.0.46-winx64'
+    [string]$MySqlHome = 'D:\Program Files\mysql-8.0.46-winx64',
+    [switch]$Rebuild
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -123,7 +124,12 @@ if (-not (Assert-OwnedPort 6380 $redisConfig)) {
 }
 
 $jar = Join-Path $repo 'mes\target\mes-1.0.0.jar'
-if (-not (Test-Path -LiteralPath $jar)) {
+if ($Rebuild -and (Assert-OwnedPort 9090 $jar)) {
+    $listener = Get-NetTCPConnection -LocalPort 9090 -State Listen | Select-Object -First 1
+    Stop-Process -Id $listener.OwningProcess
+    Wait-Process -Id $listener.OwningProcess -Timeout 15 -ErrorAction SilentlyContinue
+}
+if ($Rebuild -or -not (Test-Path -LiteralPath $jar)) {
     Write-Host 'Building with JDK 8 and Maven...'
     & mvn -f (Join-Path $repo 'mes\pom.xml') -DskipTests package
     if ($LASTEXITCODE -ne 0) { throw 'Maven build failed.' }
@@ -137,8 +143,8 @@ if (-not (Assert-OwnedPort 9090 $jar)) {
         '-Dfile.encoding=UTF-8', '-Xms128m', '-Xmx384m',
         '-jar', "`"$jar`"",
         '--spring.profiles.active=local',
-        "--spring.config.additional-location=file:$($appConfig.Replace('\','/'))",
-        "--logging.config=file:$($logConfig.Replace('\','/'))"
+        "`"--spring.config.additional-location=file:$($appConfig.Replace('\','/'))`"",
+        "`"--logging.config=file:$($logConfig.Replace('\','/'))`""
     )
     $app = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $repo -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtime 'app.log') -RedirectStandardError (Join-Path $runtime 'app-error.log')
     Write-Utf8 (Join-Path $runtime 'app.pid') ([string]$app.Id)

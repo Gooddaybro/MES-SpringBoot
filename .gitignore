@@ -1,5 +1,11 @@
 /.gitee/
 /.idea/
+/.local/
+/mes/target/
+/.env
+/.env.*
+!/.env.example
+**/application-business.yml
 /sparchetype/.mvn/
 /.idea/
 /.idea/

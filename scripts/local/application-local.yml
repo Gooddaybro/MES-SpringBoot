@@ -19,13 +19,16 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3308/mes_study?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3308/mes_study?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=8000
     username: mes_study
     password: ${MES_DB_PASSWORD}
     druid:
       initial-size: 1
       min-idle: 1
       max-active: 5
+      max-wait: 3000
+      query-timeout: 8
+      transaction-query-timeout: 8
   redis:
     host: 127.0.0.1
     port: 6380

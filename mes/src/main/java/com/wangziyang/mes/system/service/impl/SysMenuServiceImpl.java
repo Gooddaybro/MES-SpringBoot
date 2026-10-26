@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wangziyang.mes.common.util.TreeUtil;
 import com.wangziyang.mes.system.dto.SysMenuDTO;
 import com.wangziyang.mes.system.entity.SysMenu;
+import com.wangziyang.mes.system.enums.SysMenuEnum;
 import com.wangziyang.mes.system.mapper.SysMenuMapper;
 import com.wangziyang.mes.system.service.ISysMenuService;
 import com.wangziyang.mes.system.vo.TreeVO;
@@ -69,6 +70,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
         List<TreeVO<SysMenu>> menus = new ArrayList<>();
         for (SysMenu m : sysMenus) {
+            if (SysMenuEnum.TYPE_BUTTON.getCode().equals(m.getType())) {
+                continue;
+            }
             TreeVO<SysMenu> tree = new TreeVO<>();
             tree.setId(m.getId());
             tree.setPid(m.getParentId());
@@ -108,6 +112,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         List<SysMenu> sysMenus = sysMenuMapper.listBySearchByName(menuName);
         List<TreeVO<SysMenu>> menus = new ArrayList<>();
         for (SysMenu m : sysMenus) {
+            if (SysMenuEnum.TYPE_BUTTON.getCode().equals(m.getType())) {
+                continue;
+            }
             TreeVO<SysMenu> tree = new TreeVO<>();
             tree.setId(m.getId());
             tree.setPid(m.getParentId());

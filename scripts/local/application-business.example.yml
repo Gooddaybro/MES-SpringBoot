@@ -1,0 +1,14 @@
+# 复制到被忽略的 .local/application-business.yml，配合 local profile 使用。
+# URL、账号、密码从启动Java进程的环境读取；请使用已授权的业务库账号。
+spring:
+  datasource:
+    url: ${MES_DB_URL}
+    username: ${MES_DB_USERNAME}
+    password: ${MES_DB_PASSWORD}
+    druid:
+      initial-size: 1
+      min-idle: 1
+      max-active: 5
+      max-wait: 3000
+      query-timeout: 8
+      transaction-query-timeout: 8
