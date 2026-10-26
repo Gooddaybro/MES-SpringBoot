@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="MES-IDEA-Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="mes" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.wangziyang.mes.SparchetypeApplication" />
+    <option name="ALTERNATIVE_JRE_PATH" value="D:\Program Files\Java\jdk1.8.0_202" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="VM_PARAMETERS" value="-Dfile.encoding=UTF-8 -Dlogback.configurationFile=file:///D:/Documents/ChatGPT/manufacture/MES-SpringBoot/scripts/local/logback-local.xml -Xms128m -Xmx384m" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local --spring.config.additional-location=file:D:/Documents/ChatGPT/manufacture/MES-SpringBoot/.local/application-idea.yml --logging.config=file:D:/Documents/ChatGPT/manufacture/MES-SpringBoot/scripts/local/logback-local.xml" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
