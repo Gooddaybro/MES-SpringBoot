@@ -57,6 +57,9 @@ public class SpLoginFormFilterTest {
                     assertTrue(result.path("data").path("elapsedMs").isIntegralNumber());
                     assertTrue(result.path("data").path("elapsedMs").asLong() >= 0);
                     assertFalse(result.path("data").path("modelConnected").asBoolean(true));
+                    assertEquals("RULE", result.path("data").path("recognitionSource").asText());
+                    assertFalse(result.path("data").path("modelAttempted").asBoolean(true));
+                    assertTrue(result.path("data").path("fallbackReason").isNull());
                     assertFalse(response.getContentAsString().contains("private-question-not-for-logging"));
                 }
             }

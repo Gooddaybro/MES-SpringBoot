@@ -80,8 +80,14 @@
             });
             table.appendChild(body); wrap.appendChild(table); message.appendChild(wrap);
         }
-        if (data && (data.source || data.traceId)) {
+        if (data && (data.source || data.traceId || data.recognitionSource)) {
             var evidence = [];
+            if (data.recognitionSource) {
+                evidence.push("识别来源：" + data.recognitionSource);
+                evidence.push("模型请求：" + (data.modelAttempted === true ? "已尝试" : "未尝试"));
+                evidence.push("模型状态：" + (data.modelConnected === true ? "本次响应校验通过" : "本次未调用或未通过校验"));
+                if (data.fallbackReason) evidence.push("降级原因：" + data.fallbackReason);
+            }
             if (data.source) evidence.push("来源：" + data.source);
             if (data.queriedAt) evidence.push("查询时间：" + data.queriedAt);
             if (data.material) evidence.push("物料记录：" + data.material.id);
@@ -112,7 +118,7 @@
         function removePending() { if (pending.parentNode) pending.parentNode.removeChild(pending); }
         activeRequest = window.jQuery.ajax({
             url: root.getAttribute("data-api"), type: "POST", dataType: "json",
-            headers: { "X-Requested-With": "XMLHttpRequest" }, data: { message: text }, timeout: 15000
+            headers: { "X-Requested-With": "XMLHttpRequest" }, data: { message: text }, timeout: 150000
         });
         activeRequest.done(function (response) {
             if (version !== generation) return;
@@ -156,5 +162,5 @@
     Array.prototype.forEach.call(shortcuts, function (button) {
         button.addEventListener("click", function () { ask(button.getAttribute("data-question")); });
     });
-    add("bot", "你好！我可以按物料编码查询MES数据库中的工艺路线，并提供查询依据。当前使用规则识别，大模型、BOM齐套、报工和知识库待接入。请使用库中实际编码。");
+    add("bot", "你好！我可以按物料编码查询MES数据库中的工艺路线，并提供查询依据。规则优先；服务端配置模型后，未解决的单编码问题可由模型辅助识别。只发送本次问题，不发送数据库结果；请勿在问题中填写敏感信息。BOM齐套、报工和知识库尚未接入。");
 })();

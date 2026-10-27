@@ -4,7 +4,7 @@
     </button>
     <section id="mes-ai-panel" class="mes-ai-panel" aria-labelledby="mes-ai-title" hidden>
         <header class="mes-ai-header">
-            <div><strong id="mes-ai-title">MES 智能助手</strong><p>工艺查询 · 大模型待接入</p></div>
+            <div><strong id="mes-ai-title">MES 智能助手</strong><p>工艺查询 · 规则优先，模型按配置辅助</p></div>
             <div class="mes-ai-actions">
                 <button id="mes-ai-clear" type="button">清空</button>
                 <button id="mes-ai-close" type="button" aria-label="关闭助手">关闭</button>
@@ -25,6 +25,6 @@
             </div>
         </form>
         <p id="mes-ai-feedback" class="mes-ai-feedback" role="status" aria-live="polite"></p>
-        <p class="mes-ai-hint">Enter 发送 · Shift+Enter 换行 · 只读查询</p>
+        <p class="mes-ai-hint">Enter 发送 · Shift+Enter 换行 · 只读查询<br>模型补位可能发送本次问题；不发送数据库结果，请勿填写敏感信息。</p>
     </section>
 </div>

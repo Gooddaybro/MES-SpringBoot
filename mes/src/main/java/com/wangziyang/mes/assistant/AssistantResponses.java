@@ -1,5 +1,11 @@
 package com.wangziyang.mes.assistant;
 
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.TransactionTimedOutException;
+
+import java.sql.SQLTimeoutException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,7 +26,30 @@ public final class AssistantResponses {
         result.put("status", status);
         result.put("mode", mode);
         result.put("answer", answer);
+        return recognition(result, "RULE", false, false, null);
+    }
+
+    public static Map<String, Object> recognition(Map<String, Object> response, String source,
+                                                   boolean attempted, boolean connected, String failure) {
+        Map<String, Object> result = new LinkedHashMap<>(response);
+        result.put("recognitionSource", source);
+        result.put("modelAttempted", attempted);
+        result.put("modelConnected", connected);
+        result.put("fallbackReason", failure);
         return result;
+    }
+
+    public static Map<String, Object> queryFailure(Exception error) {
+        Throwable cause = error;
+        for (int depth = 0; cause != null && depth < 10; depth++, cause = cause.getCause()) {
+            if (cause instanceof QueryTimeoutException || cause instanceof TransactionTimedOutException || cause instanceof SQLTimeoutException) {
+                return reply("TIMEOUT", "database", "查询超时，请稍后重试。");
+            }
+        }
+        if (error instanceof DataAccessException || error instanceof TransactionException) {
+            return reply("DATA_UNAVAILABLE", "database", "数据服务暂时不可用，请稍后重试。");
+        }
+        return reply("ERROR", "rule-based", "助手暂时无法完成请求，请稍后重试。");
     }
 
     public static void addRoutingEvidence(Map<String, Object> result) {

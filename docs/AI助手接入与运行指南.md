@@ -1,6 +1,6 @@
 # AI助手接入与运行指南
 
-更新：2026-10-26。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文中的路径都相对于该 Git 仓库根目录，即包含 `mes/`、`scripts/` 和 `docs/` 的目录。
+更新：2026-10-27（R003）。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文中的路径都相对于该 Git 仓库根目录，即包含 `mes/`、`scripts/` 和 `docs/` 的目录。R003 详细状态见 [模型适配与评测报告](R003模型适配与评测报告.md)。
 
 ## 1. 现在交付了什么
 
@@ -10,7 +10,9 @@
 | 按物料编码查询工艺路线 | 已实现 | Java 规则识别 → 专用只读工具 → 原有 Service/Mapper → 配置的 MySQL |
 | 登录、查询权限、输入校验、依据与错误反馈 | 已实现 | 专用权限 `mes:assistant:routing:read`；不能通过前端切换角色获取权限 |
 | 原工厂业务数据库 | 待接入 | 本机已连接的是独立 `mes_study` 学习库，含原项目样例数据；没有获得真实工厂的连接配置 |
-| 真实大模型 / Python Agent | 待接入 | 当前没有模型请求、API Key、LangChain/LangGraph 服务，也没有模拟模型输出 |
+| Java 8 模型意图适配器 | 已实现，真实服务实测待验证 | 规则优先，MES_LLM_* 配置后经 Chat Completions 补位；本机无真实凭据，仅替身故障测试 |
+| Python / 多步 Agent | 未实现 | 本轮是 Java 内受控意图识别与单次只读工具执行 |
+| 伺服控制器教学主数据 | 已准备并在隔离库验证 | 6 物料、1 路线、6 工序、6 关联；见独立 [主数据说明](伺服控制器样例主数据.md) |
 | P2 BOM 齐套与报工 | 待接入 | BOM 头表为空、子项表缺失，库存/工单/报工尚无完整实现 |
 | P3 ChatBI | 待接入 | 无真实生产质检统计数据；不开放模型执行 SQL |
 | P4 RAG | 待接入 | 无文档库、Embedding、Milvus 或已导入的 FANUC 手册 |
@@ -30,10 +32,13 @@ flowchart TD
     S --> DB[(配置的 MySQL)]
     T --> R[结构化路线 + 记录ID + 查询时间]
     R --> B
-    L[后续真实模型 / Python编排] -.尚未实现，需经过Java授权工具边界.-> C
+    A -- 唯一编码但意图未解决 --> L[LlmIntentClient: 仅本次问题]
+    L --> V[Java 白名单 + 原文完整编码一致性校验]
+    V -- 通过 --> T
+    V -- 失败 --> F[安全澄清 + 稳定失败码]
 ```
 
-前端负责输入、抽屉、表格、复制和状态反馈；Java 负责身份、权限、校验、查询与异常；当前 Agent 层只是 Java 内的确定性意图识别与单工具调度。数据层沿用现有数据库，不增加业务表，不让浏览器或模型直接连接数据库。
+前端负责输入、抽屉、表格、复制和状态反馈；Java 负责身份、权限、规则优先与模型补位识别、参数校验、查询和异常。这是受控意图识别与单工具执行，尚无多步 Agent 循环。数据层沿用现有数据库，不增加业务表，不让浏览器或模型直接连接数据库。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -43,7 +48,8 @@ flowchart TD
 | `mes/src/main/resources/static/js/mes-assistant.js` | AJAX、纯文本渲染、工序表、复制、组合输入、清空竞态处理 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/controller/MesAssistantController.java` | 两个接口、登录/权限、防止异常泄露、请求编号与审计 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/AssistantResponses.java` | 统一编码校验和查询依据字段 |
-| `mes/src/main/java/com/wangziyang/mes/assistant/service/MesAssistantService.java` | 当前意图识别入口；以后替换模型识别时保留业务查询边界 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/service/MesAssistantService.java` | 规则优先、模型补位、原文一致性校验与安全降级 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/agent/` | 服务端环境配置、RestTemplate/Jackson 客户端、不可变识别结果及独立完整编码候选提取 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/service/MaterialRoutingService.java` | `get_material_routing` 工具的只读业务实现 |
 | `mes/src/main/java/com/wangziyang/mes/basedata/entity/SpMaterile.java` | 物料与路线关联，状态实际为0/1/2 |
 | `mes/src/main/java/com/wangziyang/mes/technology/entity/SpFlow.java`、`SpFlowOperRelation.java`、`SpOper.java` | 路线、排序关系和工序实体 |
@@ -196,12 +202,12 @@ fetch('/admin/assistant/chat', {
 
 沿用 `Result` 格式：`{code:0,data:{status,mode,answer,...},msg:...}`。`code=0` 说明接口正常返回，**业务查询成功必须看 `data.status=SUCCESS`**。无数据、歧义、待接入也是明确状态，不能把外层默认“操作成功”文案当作已创建单据。
 
-成功结果含 `material`、`routing`、`steps`、`source`、`queriedAt`、`traceId`、`elapsedMs`、`tool=get_material_routing`、`modelConnected=false`。每步保留 `relationId` 和 `operationId`，字段来自数据库，模型没有参与生成工序。
+成功结果含 `material`、`routing`、`steps`、`source`、`queriedAt`、`traceId`、`elapsedMs`、`tool=get_material_routing`，另含 `recognitionSource`、`modelAttempted`、`modelConnected`、`fallbackReason`。规则路径为 RULE/false/false/null，合规模型补位为 MODEL/true/true/null，失败为 RULE_FALLBACK/实际尝试标志/false/原因码。每步保留 `relationId` 和 `operationId`，字段来自数据库，模型不参与生成工序。
 
 ### 6.2 完整调用链
 
 1. 抽屉POST表单 → `MesAssistantController.chat`：核验真实登录及专用权限。
-2. `MesAssistantService`：识别工艺查询，抽取唯一完整物料编码；无编码或多编码要求澄清。
+2. `MesAssistantService`：规则识别并抽取唯一完整编码，明确工艺查询直接查库；未解决单编码问题才经模型补位，再由 Java 区分大小写逐字核对原文候选，无编码、多编码或失败则澄清。
 3. `MaterialRoutingService`：只读事务中按 `materiel=编码 AND is_deleted='0'` 精确查可用物料；最多取2条识别重码。
 4. 已有物料Service → `SpMaterileMapper` → `sp_materile.flow_id`。
 5. 已有路线Service → `SpFlowMapper` → `sp_flow.id`。
@@ -209,7 +215,7 @@ fetch('/admin/assistant/chat', {
 7. 已有工序Service → `SpOperMapper` → 批量获取工序，不逐条请求数据库。
 8. 验证引用和排序，封装记录依据与查询时间 → Controller加请求编号/耗时 → 前端以文本节点及表格显示。
 
-GET结构化接口跳过自然语言识别，复用相同业务查询和授权。未来模型只需要产生受控意图与参数，不能取代步骤1和步骤3–8，也不能提供自定义SQL。
+GET结构化接口跳过自然语言和模型识别，复用相同业务查询和授权。模型仅产生受控意图与参数，不能取代步骤1和步骤3–8，也不能提供自定义SQL。向模型只发送本次问题与必要指令，数据库结果不外发；问题本身仍可能敏感，抽屉已明确提示。
 
 ### 6.3 状态与恢复
 
@@ -228,7 +234,7 @@ GET结构化接口跳过自然语言识别，复用相同业务查询和授权�
 | HTTP504 / TIMEOUT | 查询超时，检查数据库负载和超时配置，稍后重试 |
 | HTTP500 / ERROR | 用traceId查询本地日志，用户界面不展示内部异常 |
 
-助手路径在Shiro过滤器中也返回带AUTH_REQUIRED及请求编号的401 JSON；其他旧页面仍保持原登录行为。前端15秒超时、local数据源连接/池等待3秒及socket8秒、只读工具事务有超时限制；这些是分层超时，不是承诺所有故障严格在相同秒数完成。当前没有模型/Agent调用，相关真实网络超时不适用。
+助手路径在Shiro过滤器中也返回带AUTH_REQUIRED及请求编号的401 JSON；其他旧页面仍保持原登录行为。模型默认连接3秒/读取15秒，可配置1–60000ms；前端等待150秒，为最大连接/读取设置与local数据库等待留出余量。local数据源连接/池等待3秒、socket8秒、只读事务8秒。网络读取是空闲超时，不是总耗时承诺；部署时需同步核对代理及业务库等待。
 
 ## 7. 第六步：接入原业务数据库
 
@@ -287,20 +293,27 @@ ORDER BY r.sort_num;
 
 ## 8. 第七步：真实模型接入说明与推荐顺序
 
-**当前没有可配置即生效的模型适配器。** 设置 `OPENAI_API_KEY`、安装Python或填写模型名不会让本版自动变成真实模型。当前回答来自 `MesAssistantService` 的规则提示及数据库工具结果，未设置模型base URL/model/key配置项，也没有虚假的已连接状态。
+R003 已提供 `assistant/agent/LlmProperties` 和 `LlmIntentClient`，使用 Java 8 RestTemplate/Jackson，规则优先，模型只补充受控意图；未解决的单编码问句才请求模型。当前无 MES_LLM 凭据，**真实模型连接实测待验证**。`OPENAI_API_KEY` 不会自动替代这套显式配置。
 
-建议下一轮先在Java8中增加很小的HTTP意图适配器，再评估独立Python编排：
+在启动 Java 的服务端 PowerShell 会话中设置：
 
-1. 在 `assistant/agent/` 新增真实模型客户端和配置类，通过服务端环境 `MES_LLM_BASE_URL`、`MES_LLM_MODEL`、`MES_LLM_API_KEY` 配置地址、模型名和密钥；这些变量在当前版本**尚未消费**。
-2. 使用已有Spring HTTP/Jackson能力，设置连接/读取超时，禁止把Key返回浏览器或日志；URL必须由部署配置决定，不能由用户输入决定。
-3. 模型只返回允许的意图与完整参数，例如 `get_material_routing(materialCode)`。Java重新校验白名单、登录、权限和参数，再调用现有工具；生产数字和工序直接展示工具结果。
-4. 不接收模型给出的userId/role/SQL作为授权依据；模型猜测、分析建议和数据库事实分开。没有工具依据的生产结论不作为事实回答。
-5. 增加真实网络契约测试与本地HTTP替身测试：401密钥失败、429限流、连接错误、读取超时、非法JSON、未知工具、多工具次数上限及无依据回答。
-6. 使用部署环境Key对配置的模型做最小鉴权/结构化意图请求，并确认实际响应和耗时后，才能把模型状态改为“已验证可用”。本轮未执行这一项，因为没有模型配置。
+```powershell
+$env:MES_LLM_BASE_URL = 'https://api.openai.com/v1' # 或审核后的兼容API根路径
+$env:MES_LLM_MODEL = '填写供应商确认的实际模型ID'
+$secureModelKey = Read-Host '模型API Key（不回显）' -AsSecureString
+$modelCredential = New-Object System.Management.Automation.PSCredential('api', $secureModelKey)
+$env:MES_LLM_API_KEY = $modelCredential.GetNetworkCredential().Password
+# 可选：MES_LLM_CONNECT_TIMEOUT_MS 默认3000，MES_LLM_READ_TIMEOUT_MS 默认15000，范围1–60000
+.\scripts\local\Start-Local.ps1 -Rebuild
+```
 
-若后续采用Python：使用Python3.10+、固定依赖版本与独立虚拟环境，Java→Python采用HTTP JSON，契约包含requestId、问题、工具描述和服务器签发的短期授权上下文。Python不得直接连接MES数据库；Java工具调用时校验签名、过期、请求用户/数据范围和工具白名单。不得把Java Session Cookie/管理员账号长期转交给Agent。
+base URL 去尾斜线后追加 `/chat/completions`，已含后缀则不重复。远程必须 HTTPS；HTTP 只支持字面回环地址供本地替身使用。拒绝 user-info/query/fragment 和重定向，API Key 只放服务端鉴权头，不写日志或前端。三项缺失或配置非法不阻止启动与规则查询。
 
-建议先由Java在当前请求内执行工具，再将结构化结果交给Python编排；如必须回调Java，为回调专门建立受限服务接口和短期凭据校验，不能将本轮Cookie接口直接当作匿名服务接口。定义例如连接3秒、单模型读取20秒、总编排30秒和工具调用次数上限；Java保留规则查询回退。异常返回模型不可用/超时，不改写成“数据库无数据”。这些是后续设计要求，**当前没有Python启动命令或健康接口**。
+用“100112需要经过哪些环节”验证模型补位；用“查100112的工艺路线”验证规则零模型调用。模型只能返回四字段 JSON（intent、materialCode、clarificationNeeded、reason），Java 校验白名单及原文完整编码，不能接受猜测、改大小写或截取编码。失败显示 RULE_FALLBACK 和 MODEL_TIMEOUT/HTTP/JSON/参数等稳定码，要求用户澄清。工艺事实仍由原只读工具查询。
+
+`modelConnected=true` 只表示本次调用及必要校验通过；必须使用真实 Key 完成实际请求和结果检查才能记录真实连接验证。当前 HTTP 替身通过不等于真实供应商通过。完整配置、原因码、隐私边界、30 条评测和验证命令见 [R003 报告](R003模型适配与评测报告.md)。
+
+Python 是后续可选设计，本轮没有 Python 服务或多步 Agent 循环。本轮不向模型发送数据库结果；若将来允许编排访问结果，须重新审核数据范围与外发契约。回调 Java 必须有受限接口、短期凭据和工具白名单，不能把现有 Cookie 接口当作匿名工具。
 
 ## 9. 第八步：P2–P4继续开发
 
@@ -390,7 +403,7 @@ mvn -f mes/pom.xml '-Dtest=MesAssistantDatabaseIT' '-Dmes.it.enabled=true' `
 
 本轮没有扩大到修复整站所有遗留安全问题：旧Boot/Shiro、口令散列和原业务接口的权限粒度仍需专项治理。助手新增权限不等于原系统已完成安全升级。
 
-## 11. 本轮验证记录与交付定位
+## 11. R002 历史验证记录与交付定位
 
 审查起点：`agent` / `3d4433c`；origin未有agent分支，origin/master为`37ce2dc`。参考助手为origin/feature/mes-assistant-chat-ui `738723d`，未整体合并该分支。
 
@@ -413,7 +426,7 @@ mvn -f mes/pom.xml '-Dtest=MesAssistantDatabaseIT' '-Dmes.it.enabled=true' `
 
 本机浏览器验收截图保存在被忽略的 `.local/assistant-browser-verified.png`，不随Git发布。窄屏下原系统“选择模块”下拉有既有的空白问题，左上角展开侧栏仍能正常进入物料菜单；本轮未修改原spLayui的移动端模块选择逻辑。助手的窄屏抽屉及业务iframe共存已验证。
 
-未验证范围必须保留：真实工厂数据库、真实模型鉴权/网络、Python Agent和P2–P4业务闭环。这些服务当前未接入，不能列为测试通过。
+未验证范围仍包括真实工厂数据库、真实模型鉴权/网络、Python Agent 和 P2–P4 业务闭环。R003 已实现 Java 适配器及 HTTP 替身故障测试，不能把替身通过列为真实模型通过；最新记录见 R003 报告。
 
 最终提交与远程一致性通过以下命令核对：
 
@@ -424,3 +437,9 @@ git ls-remote --heads origin agent
 ```
 
 本指南为当前接入说明；`LOCAL-RUN.md`保留早期环境记录，`MES_REFACTOR_JOURNAL.md`保留历史设计与本轮日志。发生阶段编号或历史示例冲突时，以本指南的实际实现和P2–P4定义为准。
+
+## 12. R003 最新验收
+
+2026-10-27：原生 JDK 1.8.0_202 / Maven 3.6.3，完整 package 的 112 项 Java 测试通过（含 30 项 HTTP 替身）；显式真实学习库只读 IT 1 项、Node 11 项、启动路径与种子 SQL 探针通过。最终新 jar 在 9090 启动，浏览器验证码登录、SERVO-DEMO-CTRL-001 六工序和 MODEL_NOT_CONFIGURED 降级显示通过。
+
+30 条规则评测：R002 22/30、R003 无模型侧 24/30，错误工具调用 1→0；这不是混合真实模型准确率。模型配置与凭据均缺失，真实供应商实测待验证。请求元数据、逐条评测快照、文件清单和风险见 [R003报告](R003模型适配与评测报告.md)；样例主数据独立见 [主数据说明](伺服控制器样例主数据.md)。

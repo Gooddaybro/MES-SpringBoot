@@ -1,0 +1,396 @@
+{
+  "datasetSize" : 30,
+  "baselineSource" : "781ed2d:MesAssistantService (test-only LegacyR002Rules snapshot)",
+  "measurementBoundary" : "30 local function calls; mocked tool; no HTTP/DB latency; no credentials consumed",
+  "r002Rules" : {
+    "intentCorrect" : 22,
+    "intentAccuracy" : 0.7333333333333333,
+    "codeCorrect" : 6,
+    "codeCases" : 12,
+    "codeAccuracy" : 0.5,
+    "wrongToolCalls" : 1,
+    "clarifications" : 6,
+    "clarificationRate" : 0.2,
+    "modelCalls" : 0,
+    "modelCallRatio" : 0.0,
+    "modelEligibleCases" : 0,
+    "averageLocalMs" : 0.4599066666666667,
+    "decisions" : [ {
+      "id" : "E01",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E02",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E03",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "A_100-1/2.3",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E04",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "SERVO-DEMO-CTRL-001",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E05",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E06",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E07",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E08",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E09",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E10",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E11",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E12",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E13",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E14",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E15",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E16",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E17",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E18",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E19",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E20",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E21",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E22",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E23",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E24",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E25",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "BOM-001",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E26",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E27",
+      "intent" : "HELP",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E28",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E29",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E30",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    } ]
+  },
+  "r003RulesModelDisabled" : {
+    "intentCorrect" : 24,
+    "intentAccuracy" : 0.8,
+    "codeCorrect" : 6,
+    "codeCases" : 12,
+    "codeAccuracy" : 0.5,
+    "wrongToolCalls" : 0,
+    "clarifications" : 10,
+    "clarificationRate" : 0.3333333333333333,
+    "modelCalls" : 0,
+    "modelCallRatio" : 0.0,
+    "modelEligibleCases" : 6,
+    "averageLocalMs" : 0.24584,
+    "decisions" : [ {
+      "id" : "E01",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E02",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E03",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "A_100-1/2.3",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E04",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "SERVO-DEMO-CTRL-001",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E05",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E06",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E07",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E08",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E09",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E10",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E11",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E12",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E13",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E14",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E15",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E16",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E17",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E18",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E19",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E20",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E21",
+      "intent" : "UNSUPPORTED",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E22",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E23",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E24",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "100112",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E25",
+      "intent" : "QUERY_MATERIAL_ROUTING",
+      "toolCode" : "BOM-001",
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E26",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E27",
+      "intent" : "HELP",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E28",
+      "intent" : "NEEDS_CLARIFICATION",
+      "toolCode" : null,
+      "recognitionSource" : "RULE_FALLBACK",
+      "fallbackReason" : "MODEL_NOT_CONFIGURED"
+    }, {
+      "id" : "E29",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    }, {
+      "id" : "E30",
+      "intent" : "INVALID_INPUT",
+      "toolCode" : null,
+      "recognitionSource" : "RULE",
+      "fallbackReason" : null
+    } ]
+  },
+  "hybridRealModel" : "NOT_EXECUTED: real credentials and result review required; no model accuracy published"
+}

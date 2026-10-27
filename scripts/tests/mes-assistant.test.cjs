@@ -65,7 +65,7 @@ test('opens and closes a single initialized drawer without duplicate requests', 
   app.submit('100112'); assert.equal(app.requests.length, 1);
   app.nodes.form.emit('submit'); assert.equal(app.requests.length, 1);
   assert.equal(app.requests[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
-  assert.equal(app.requests[0].options.timeout, 15000);
+  assert.equal(app.requests[0].options.timeout, 150000);
   app.document.emit('keydown', { key: 'Escape' }); assert.equal(app.nodes.panel.hidden, true);
 });
 
@@ -130,4 +130,20 @@ test('reply completion preserves focus in an underlying MES form', () => {
   app.document.appendChild(businessInput); businessInput.focus();
   app.requests[0].resolve({ code: 0, data: { status: 'NO_MATERIAL', answer: '未找到物料' } });
   assert.ok(app.document.activeElement === businessInput, 'Reply must preserve focus outside the drawer');
+});
+
+test('per-request model recognition and failure metadata are visible and copied as text', async () => {
+  const app = setup(); app.submit('100112需要经过哪些环节');
+  app.requests[0].resolve({ code: 0, data: { status: 'NEEDS_INPUT', answer: '请明确问题', recognitionSource: 'RULE_FALLBACK',
+    modelAttempted: true, modelConnected: false, fallbackReason: 'MODEL_HTTP_429', traceId: 'r003-trace' } });
+  assert.ok(app.nodes.messages.textContent.includes('RULE_FALLBACK'));
+  assert.ok(app.nodes.messages.textContent.includes('MODEL_HTTP_429'));
+  assert.ok(app.nodes.messages.textContent.includes('未通过'));
+  const copy = walk(app.nodes.messages).filter(x => x.tagName === 'button' && x.textContent === '复制回答').at(-1);
+  copy.emit('click'); await Promise.resolve();
+  assert.ok(app.copied[0].includes('MODEL_HTTP_429'));
+  app.submit('100112需要经过哪些环节');
+  app.requests[1].resolve({ code: 0, data: { status: 'NO_MATERIAL', answer: '无物料', recognitionSource: 'MODEL',
+    modelAttempted: true, modelConnected: true, fallbackReason: null } });
+  assert.ok(app.nodes.messages.textContent.includes('本次响应校验通过'));
 });

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wangziyang.mes.assistant.service.MaterialRoutingService;
 import com.wangziyang.mes.assistant.service.MesAssistantService;
+import com.wangziyang.mes.assistant.agent.LlmIntentClient;
+import com.wangziyang.mes.assistant.agent.LlmIntentResult;
 import com.wangziyang.mes.assistant.controller.MesAssistantController;
 import com.wangziyang.mes.system.entity.SysUser;
 import org.apache.shiro.subject.Subject;
@@ -36,16 +38,18 @@ public class MesAssistantControllerTest {
     private static final String PERMISSION = "mes:assistant:routing:read";
     private MaterialRoutingService routing;
     private Subject subject;
+    private LlmIntentClient llm;
     private MockMvc mvc;
 
     @Before
     public void setUp() throws Exception {
         routing = mock(MaterialRoutingService.class);
+        llm = mock(LlmIntentClient.class);
         subject = mock(Subject.class);
         when(subject.isAuthenticated()).thenReturn(true);
         when(subject.isPermitted(PERMISSION)).thenReturn(true);
         ThreadContext.bind(subject);
-        mvc = MockMvcBuilders.standaloneSetup(new MesAssistantController(new MesAssistantService(routing), routing)).build();
+        mvc = MockMvcBuilders.standaloneSetup(new MesAssistantController(new MesAssistantService(routing, llm), routing)).build();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "SUCCESS");
         result.put("mode", "database");
@@ -67,8 +71,10 @@ public class MesAssistantControllerTest {
                 .andExpect(jsonPath("$.data.status").value("AUTH_REQUIRED"));
         mvc.perform(get("/admin/assistant/material-routing").param("materialCode", "100112"))
                 .andExpect(status().isUnauthorized());
+        mvc.perform(post("/admin/assistant/chat").param("message", "100112需要经过哪些环节"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.data.modelAttempted").value(false));
         verify(subject, never()).isPermitted(anyString());
-        verifyZeroInteractions(routing);
+        verifyZeroInteractions(routing, llm);
     }
 
     @Test
@@ -83,7 +89,21 @@ public class MesAssistantControllerTest {
         mvc.perform(get("/admin/assistant/material-routing").param("materialCode", "100112"))
                 .andExpect(status().isForbidden());
         verify(subject, never()).isPermitted("user:add");
-        verifyZeroInteractions(routing);
+        mvc.perform(post("/admin/assistant/chat").param("message", "100112需要经过哪些环节"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.data.modelAttempted").value(false));
+        verifyZeroInteractions(routing, llm);
+    }
+
+    @Test
+    public void modelSuccessIsPreservedAndDatabaseFailureDoesNotEraseIt() throws Exception {
+        when(llm.recognize(anyString())).thenReturn(LlmIntentResult.success("QUERY_MATERIAL_ROUTING", "100112", false));
+        mvc.perform(post("/admin/assistant/chat").param("message", "100112需要经过哪些环节"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.recognitionSource").value("MODEL"))
+                .andExpect(jsonPath("$.data.modelAttempted").value(true)).andExpect(jsonPath("$.data.modelConnected").value(true));
+        when(routing.query(anyString())).thenThrow(new DataAccessResourceFailureException("secret"));
+        mvc.perform(post("/admin/assistant/chat").param("message", "100112需要经过哪些环节"))
+                .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.data.modelConnected").value(true))
+                .andExpect(jsonPath("$.data.recognitionSource").value("MODEL"));
     }
 
     @Test
@@ -105,6 +125,7 @@ public class MesAssistantControllerTest {
         mvc.perform(get("/admin/assistant/material-routing").param("materialCode", code))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.tool").value("get_material_routing"));
         verify(routing).query(code);
+        verifyZeroInteractions(llm);
     }
 
     @Test
