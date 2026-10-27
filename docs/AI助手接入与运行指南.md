@@ -1,6 +1,8 @@
 # AI助手接入与运行指南
 
-更新：2026-10-27（R003）。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文中的路径都相对于该 Git 仓库根目录，即包含 `mes/`、`scripts/` 和 `docs/` 的目录。R003 详细状态见 [模型适配与评测报告](R003模型适配与评测报告.md)。
+更新：2026-10-27（R003文档同步）。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文中的路径都相对于该 Git 仓库根目录，即包含 `mes/`、`scripts/` 和 `docs/` 的目录。R003 详细状态见 [模型适配与评测报告](R003模型适配与评测报告.md)。
+
+本次同步核对的业务代码提交：[`9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c`](https://github.com/Gooddaybro/MES-SpringBoot/commit/9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c)，R002 基线为 `781ed2d31e47bf50879e7ad07af40831683ba57b`。**当前是“模型辅助的受控意图识别 + Java 工具执行”**，没有完整的多步 Agent 工具循环。后续跨电脑工作以本指南的当前操作和第 9 节进入条件为准，历史日志不作为功能完成证明。
 
 ## 1. 现在交付了什么
 
@@ -25,17 +27,25 @@
 flowchart TD
     B[浏览器 /admin/index 公共抽屉] --> C[Java MesAssistantController]
     C --> G[Shiro 登录 + 专用查询权限]
-    G --> A[MesAssistantService 规则识别]
-    A --> T[MaterialRoutingService 只读工具]
-    G --> T
+    G -- 鉴权通过 --> A[MesAssistantService 输入校验与规则识别]
+    G -- 拒绝 --> E[401/403 无模型和工具调用]
+    A -- 明确查询且唯一编码 --> T[MaterialRoutingService 只读工具]
+    A -- 帮助或规则拒绝或缺码多码 --> D[RULE 响应或澄清]
+    G -- GET且编码合法 --> T
     T --> S[原 MES Service → MyBatis-Plus Mapper]
     S --> DB[(配置的 MySQL)]
     T --> R[结构化路线 + 记录ID + 查询时间]
     R --> B
     A -- 唯一编码但意图未解决 --> L[LlmIntentClient: 仅本次问题]
     L --> V[Java 白名单 + 原文完整编码一致性校验]
-    V -- 通过 --> T
-    V -- 失败 --> F[安全澄清 + 稳定失败码]
+    V -- 查询且原文编码一致 --> T
+    V -- 合规UNSUPPORTED或需澄清 --> N[MODEL 分类响应 无工具调用]
+    L -- 配置或网络或响应失败 --> F[RULE_FALLBACK 澄清与稳定失败码]
+    V -- 参数或原文校验失败 --> F
+    E --> B
+    D --> B
+    N --> B
+    F --> B
 ```
 
 前端负责输入、抽屉、表格、复制和状态反馈；Java 负责身份、权限、规则优先与模型补位识别、参数校验、查询和异常。这是受控意图识别与单工具执行，尚无多步 Agent 循环。数据层沿用现有数据库，不增加业务表，不让浏览器或模型直接连接数据库。
@@ -49,7 +59,10 @@ flowchart TD
 | `mes/src/main/java/com/wangziyang/mes/assistant/controller/MesAssistantController.java` | 两个接口、登录/权限、防止异常泄露、请求编号与审计 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/AssistantResponses.java` | 统一编码校验和查询依据字段 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/service/MesAssistantService.java` | 规则优先、模型补位、原文一致性校验与安全降级 |
-| `mes/src/main/java/com/wangziyang/mes/assistant/agent/` | 服务端环境配置、RestTemplate/Jackson 客户端、不可变识别结果及独立完整编码候选提取 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/agent/LlmProperties.java` | 从 Spring Environment 读取 MES_LLM_*，验证地址/密钥格式/超时，计算 Chat Completions 端点 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/agent/LlmIntentClient.java` | Java 8 RestTemplate/Jackson 单次非流式请求，限制响应大小并验证 JSON/意图，返回稳定失败码 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/agent/LlmIntentResult.java` | 不可变识别结果；保留尝试标志/失败码，不把模型 reason 当作业务答案 |
+| `mes/src/main/java/com/wangziyang/mes/assistant/agent/MaterialCodeCandidates.java` | 独立提取原话完整候选，保留大小写和分隔符；不修复或猜测编码 |
 | `mes/src/main/java/com/wangziyang/mes/assistant/service/MaterialRoutingService.java` | `get_material_routing` 工具的只读业务实现 |
 | `mes/src/main/java/com/wangziyang/mes/basedata/entity/SpMaterile.java` | 物料与路线关联，状态实际为0/1/2 |
 | `mes/src/main/java/com/wangziyang/mes/technology/entity/SpFlow.java`、`SpFlowOperRelation.java`、`SpOper.java` | 路线、排序关系和工序实体 |
@@ -78,7 +91,7 @@ flowchart TD
 
 当前实测工具是 JDK **1.8.0_202**、Maven **3.6.3**、MySQL **8.0.46**；Node **24.19.0** 只用于开发时的前端测试，运行 MES 不需要 Node/Vue 项目。推荐使用 JDK8 复现本轮环境，不能因为机器默认 JDK21 就直接运行旧 Boot 项目。
 
-官方 [Boot2.1.7要求](https://docs.spring.io/spring-boot/docs/2.1.7.RELEASE/reference/html/getting-started-system-requirements.html) 是 Java8、兼容至Java12，Maven3.3+。当前 [LangChain4j最低JDK17](https://docs.langchain4j.dev/get-started/)、[其Starter要求Boot3.5+/4](https://docs.langchain4j.dev/tutorials/spring-boot-integration/)，[Spring AI2.x对应Boot4.x](https://docs.spring.io/spring-ai/reference/getting-started.html)。[LangChain v1](https://docs.langchain.com/oss/python/migrate/langchain-v1) 与 [LangGraph v1](https://docs.langchain.com/oss/python/migrate/langgraph-v1) 要求 Python3.10+。本轮保留旧工程，没有引入这些SDK或升级整个MES。
+以实际 `mes/pom.xml` 的Java1.8/Boot2.1.7及本项目JDK8测试为运行依据。本轮没有引入LangChain4j/Spring AI/Python或升级整个MES。保留外部参考链接：[Boot2.1.7要求](https://docs.spring.io/spring-boot/docs/2.1.7.RELEASE/reference/html/getting-started-system-requirements.html)、[LangChain4j入门](https://docs.langchain4j.dev/get-started/)、[其Spring Boot集成](https://docs.langchain4j.dev/tutorials/spring-boot-integration/)、[Spring AI环境要求](https://docs.spring.io/spring-ai/reference/getting-started.html)、[LangChain迁移说明](https://docs.langchain.com/oss/python/migrate/langchain-v1)、[LangGraph迁移说明](https://docs.langchain.com/oss/python/migrate/langgraph-v1)。这些链接用于未来独立子项选型，不能把外部SDK的版本要求当成当前已引入依赖；届时重新核对选定版本。
 
 在另一台机器上：
 
@@ -125,7 +138,7 @@ Get-Content .\.local\app.log -Tail 60
 (Invoke-WebRequest 'http://127.0.0.1:9090/login-ui' -UseBasicParsing).StatusCode
 ```
 
-预期HTTP200。日志：`.local/app.log`、`app-error.log`、`mysql.log`、`redis.log`。脚本构建采用 `-DskipTests` 以便启动，**测试必须按第8节另行执行**。
+预期HTTP200。日志：`.local/app.log`、`app-error.log`、`mysql.log`、`redis.log`。脚本构建采用 `-DskipTests` 以便启动，**测试必须按第10节另行执行**。
 
 当前默认会话使用 Ehcache/内存 SessionDAO，Redis并非助手查询的必要依赖；启动脚本仍保留原本的本地Redis6380实例，以兼容已有学习配置。
 
@@ -177,10 +190,14 @@ Get-Content .\.local\app.log -Tail 60
 
 | 接口 | 参数 | 作用 |
 | --- | --- | --- |
-| `POST /admin/assistant/chat` | form `message`，1–1000字 | 规则意图识别、澄清、单工具调度 |
+| `POST /admin/assistant/chat` | form `message`，1–1000个Java字符串字符 | 规则优先、模型补位、澄清、单工具调度 |
 | `GET /admin/assistant/material-routing` | `materialCode`，完整编码1–255字符 | 可复用的结构化只读查询 |
 
 目前接受英文字母/数字开头，其余为英文字母、数字、点、下划线、斜杠、连字符的编码；不截断过长编码，不进行模糊匹配。接入其他编码规则前应先补参数与匹配测试。
+
+Java 对模型编码执行双重校验：完整匹配 `[A-Za-z0-9][A-Za-z0-9._/-]{0,254}`，再与从本次原话独立提取的**唯一完整候选逐字一致**。`100113` 不能替代原话 `100112`，`a-01` 不能替代 `A-01`，`100112` 不能作为 `100112@` 或 `100112/100113` 的子串被采用。不会补零、全角转半角、改大小写或分隔符。
+
+汉字、代码定义的ASCII空白和显式标点是分隔符；点、下划线、斜线、短横线属于编码。非空白控制字符先拒绝，不用 `trim()` 去掉后查询。重复同一个编码可继续；不同编码要求澄清。英文常用词也可能是编码，`GO`、`IT`、`for` 不被全局忽略；只在完整匹配的英文问句语法中确定编码位置，缺码的 `routing for?` 要求补充，`show routing for for?` 可表示编码 `for`。不确定的多 token 表达保守澄清。模型参数一致性区分大小写；数据库自身的 collation 并未因此改变。
 
 现在支持裸编码 `100112`，或「查询物料编码为100112的工艺路线」。这是已经查到的本地样例，连接其他库时换成实际存在的编码。
 
@@ -207,7 +224,7 @@ fetch('/admin/assistant/chat', {
 ### 6.2 完整调用链
 
 1. 抽屉POST表单 → `MesAssistantController.chat`：核验真实登录及专用权限。
-2. `MesAssistantService`：规则识别并抽取唯一完整编码，明确工艺查询直接查库；未解决单编码问题才经模型补位，再由 Java 区分大小写逐字核对原文候选，无编码、多编码或失败则澄清。
+2. `MesAssistantService`：先检查长度、控制字符、写入/SQL/明显指令覆盖、帮助和已知不支持业务；裸编码或明确路线加唯一编码直接查库。无编码、多编码和非法格式不会请求模型；只有规则未解决且有唯一合法候选的问题才调用客户端。客户端只接收本次原话和固定意图指令，Java 随后核对意图白名单与原文候选，失败要求补充，不把模型猜测传入查询。
 3. `MaterialRoutingService`：只读事务中按 `materiel=编码 AND is_deleted='0'` 精确查可用物料；最多取2条识别重码。
 4. 已有物料Service → `SpMaterileMapper` → `sp_materile.flow_id`。
 5. 已有路线Service → `SpFlowMapper` → `sp_flow.id`。
@@ -216,6 +233,8 @@ fetch('/admin/assistant/chat', {
 8. 验证引用和排序，封装记录依据与查询时间 → Controller加请求编号/耗时 → 前端以文本节点及表格显示。
 
 GET结构化接口跳过自然语言和模型识别，复用相同业务查询和授权。模型仅产生受控意图与参数，不能取代步骤1和步骤3–8，也不能提供自定义SQL。向模型只发送本次问题与必要指令，数据库结果不外发；问题本身仍可能敏感，抽屉已明确提示。
+
+登录与 `mes:assistant:routing:read` 在 Controller 执行服务前检查；Shiro 过滤器也会拦截匿名助手请求。当前没有多租户/工厂级数据范围实现，不能把专用接口权限表述为已完成全部生产数据隔离。Java 工具仅为 `get_material_routing`；客户端意图白名单仅为 `QUERY_MATERIAL_ROUTING` 与 `UNSUPPORTED`，`preview_work_report` 尚未注册。模型没有数据库凭据、Mapper、SQL 或写入入口。
 
 ### 6.3 状态与恢复
 
@@ -226,7 +245,7 @@ GET结构化接口跳过自然语言和模型识别，复用相同业务查询�
 | NO_MATERIAL | 未找到正常状态物料；检查编码、当前库及0/1/2状态 |
 | NO_ROUTE / NO_STEPS | 未绑定/失效路线或未配置工序；在原工艺维护页补主数据 |
 | ROUTE_INCOMPLETE | 工序引用/排序不完整；不能当作完整路线使用 |
-| UNSUPPORTED | BOM/报工/统计/RAG等待接入，不产生业务写入 |
+| UNSUPPORTED | 规则或模型识别为不支持的只读/业务范围；不会执行工具或产生业务写入，结合识别来源判断是否调用过模型 |
 | HTTP400 / INVALID_INPUT | 空值、非法或过长参数，修正后重试 |
 | HTTP401 / AUTH_REQUIRED | 重新登录并检查会话是否过期 |
 | HTTP403 / FORBIDDEN | 管理员授予专用权限，之后重新登录 |
@@ -235,6 +254,27 @@ GET结构化接口跳过自然语言和模型识别，复用相同业务查询�
 | HTTP500 / ERROR | 用traceId查询本地日志，用户界面不展示内部异常 |
 
 助手路径在Shiro过滤器中也返回带AUTH_REQUIRED及请求编号的401 JSON；其他旧页面仍保持原登录行为。模型默认连接3秒/读取15秒，可配置1–60000ms；前端等待150秒，为最大连接/读取设置与local数据库等待留出余量。local数据源连接/池等待3秒、socket8秒、只读事务8秒。网络读取是空闲超时，不是总耗时承诺；部署时需同步核对代理及业务库等待。
+
+### 6.4 识别元数据与“真实连接已验证”的区别
+
+| 实际分支 | recognitionSource | modelAttempted | modelConnected | fallbackReason | 工具执行 |
+| --- | --- | --- | --- | --- | --- |
+| 规则命中、帮助、规则拒绝、缺码/多码、GET、鉴权拒绝 | RULE | false | false | null | 只有鉴权/参数通过的规则查询或 GET 才执行 |
+| 需要补位但三项未配置 | RULE_FALLBACK | false | false | MODEL_NOT_CONFIGURED | 不执行，NEEDS_INPUT |
+| 非法端点/超时/密钥格式，或 JVM 全局 CookieHandler | RULE_FALLBACK | false | false | MODEL_INVALID_CONFIGURATION | 不执行，NEEDS_INPUT |
+| 已尝试请求，网络/HTTP/结构校验失败 | RULE_FALLBACK | true | false | 对应稳定原因码 | 不执行，NEEDS_INPUT |
+| 模型编码与原文不一致 | RULE_FALLBACK | true | false | MODEL_INVALID_PARAMETERS | 不执行，NEEDS_INPUT |
+| 合规识别 QUERY_MATERIAL_ROUTING，编码匹配且不需澄清 | MODEL | true | true | null | 调用原 Java 只读服务 |
+| 合规识别 UNSUPPORTED（materialCode=null） | MODEL | true | true | null | 不执行，status=UNSUPPORTED；这不是模型故障 |
+| 合规返回 QUERY_MATERIAL_ROUTING 并要求澄清 | MODEL | true | true | null | 不执行，status=NEEDS_INPUT |
+
+`modelAttempted` 记录本次客户端是否进入请求尝试，不等于收到成功响应；`modelConnected` 只表示**本次响应及必要校验已通过**。模型识别成功后数据库仍可能返回 `NO_MATERIAL`、503 或504，识别元数据会保留，不能把它当作业务查询成功。`fallbackReason=null` 也不代表已经调用模型。
+
+旧 `mode` 字段仍用于展示/错误分类，不能据其值判断模型是否调用；使用上述四个本次识别字段和独立真实验收记录。
+
+未知意图（例如 `EXECUTE_SQL`）与合规的 `UNSUPPORTED` 不同：前者是 `MODEL_UNKNOWN_INTENT` 降级，后者是成功的范围外分类。助手请求日志只保留 traceId、接口、状态、来源、尝试标志、失败码和耗时，不记录原话、API Key、鉴权头、模型 reason 或查询结果；不据此宣称原系统所有调试日志已完成安全治理。
+
+“真实模型连接已验证”是一次**独立验收记录**，不能由是否存在 Key 或某个布尔值自动推导。须记录实际供应商/模型、日期、脱敏请求编号、HTTP结果、延迟、意图和编码核对结论，并明确不是 Mock。当前没有这样的真实供应商验收证据；30项HTTP替身与模拟客户端通过不替代它。
 
 ## 7. 第六步：接入原业务数据库
 
@@ -295,6 +335,16 @@ ORDER BY r.sort_num;
 
 R003 已提供 `assistant/agent/LlmProperties` 和 `LlmIntentClient`，使用 Java 8 RestTemplate/Jackson，规则优先，模型只补充受控意图；未解决的单编码问句才请求模型。当前无 MES_LLM 凭据，**真实模型连接实测待验证**。`OPENAI_API_KEY` 不会自动替代这套显式配置。
 
+| 服务端变量 | 实际规则 |
+| --- | --- |
+| MES_LLM_BASE_URL | API 根路径；例如 `https://api.openai.com/v1`；去尾斜线追加 `/chat/completions`，已有后缀不重复 |
+| MES_LLM_MODEL | 供应商确认的模型ID，不能用文档中的占位文字作为实际模型名 |
+| MES_LLM_API_KEY | 必需，仅用于服务端 Bearer 鉴权头；不会发给前端或写入提示文本 |
+| MES_LLM_CONNECT_TIMEOUT_MS | 可选，默认3000ms，接受1–60000；非法值使模型配置无效，不阻止规则功能启动 |
+| MES_LLM_READ_TIMEOUT_MS | 可选，默认15000ms，接受1–60000；是读取空闲超时，不是整个编排的总时限 |
+
+类通过 Spring `Environment` 读取这些同名项；本指南用启动进程环境注入。新机器须自行提供本机配置，Git 不携带 `.local/`、数据库口令或模型密钥。修改后重启 Java 才会重新读取；浏览器页面不能设置模型地址或 Key。
+
 在启动 Java 的服务端 PowerShell 会话中设置：
 
 ```powershell
@@ -313,35 +363,121 @@ base URL 去尾斜线后追加 `/chat/completions`，已含后缀则不重复。
 
 `modelConnected=true` 只表示本次调用及必要校验通过；必须使用真实 Key 完成实际请求和结果检查才能记录真实连接验证。当前 HTTP 替身通过不等于真实供应商通过。完整配置、原因码、隐私边界、30 条评测和验证命令见 [R003 报告](R003模型适配与评测报告.md)。
 
-Python 是后续可选设计，本轮没有 Python 服务或多步 Agent 循环。本轮不向模型发送数据库结果；若将来允许编排访问结果，须重新审核数据范围与外发契约。回调 Java 必须有受限接口、短期凭据和工具白名单，不能把现有 Cookie 接口当作匿名工具。
+### 8.1 响应约束与失败处理
+
+仅接受一个 assistant choice、文本 content 和 `finish_reason=stop`，拒绝工具/函数调用与截断结果。内层 JSON 必须恰好包含 intent、materialCode、clarificationNeeded、reason 四字段，类型不得强转，禁止重复字段、额外SQL字段、代码围栏和尾随JSON。HTTP体上限64KiB、content上限2048字符、reason上限256字符、JSON嵌套上限16层；reason 不用于生成工艺事实。模型合规返回后仍须由 Java 执行第6节原文与白名单校验。
+
+| 稳定降级原因 | 检查与恢复 |
+| --- | --- |
+| MODEL_NOT_CONFIGURED | 检查启动Java的会话是否提供三项配置，重启；规则查询仍可用 |
+| MODEL_INVALID_CONFIGURATION | 核对URL、头字段和超时格式；存在全局CookieHandler时客户端拒绝模型请求 |
+| MODEL_TIMEOUT / MODEL_CONNECTION_ERROR | 检查供应商网络/TLS/代理和空闲超时；改用明确规则查询，不声称数据库无物料 |
+| MODEL_HTTP_401 / MODEL_HTTP_429 / MODEL_HTTP_5XX | 分别检查鉴权、配额/限流、供应商服务；记录失败码，不记录响应原文或Key |
+| MODEL_HTTP_4XX / MODEL_HTTP_3XX / MODEL_HTTP_ERROR | 检查接口兼容性和端点；客户端不跟随重定向 |
+| MODEL_INVALID_JSON / MODEL_UNKNOWN_INTENT | 检查供应商是否遵守输出契约；用户侧要求补充问题，不接收任意新工具 |
+| MODEL_INVALID_PARAMETERS / MODEL_RESPONSE_TOO_LARGE | 参数、原文一致性或响应上限失败；不得修复/截短模型编码后查询 |
+
+已知HTTP失败状态优先于错误体的解析/读取失败；没有自动模型重试。故障降级统一返回清楚的补充提示和本次元数据。部署时不要启用HTTP wire/header/body日志。
+
+`MODEL_HTTP_401`表示上游模型鉴权失败，与MES自身的HTTP401登录失败不同。已授权聊天请求发生模型故障时，当前入口正常返回HTTP200、`status=NEEDS_INPUT`并带降级原因；不能只看HTTP200判断模型成功。MES自身未登录返回401、无业务权限返回403，且不会尝试模型。
+
+### 8.2 真实模型的最小验收（计划中，尚未执行）
+
+1. 在目标服务端提供经确认的三项配置，确认供应商允许本次样例问题的数据处理；重启 Java，不在共享终端输入真实密钥字面量。
+2. 用“查100112的工艺路线”检查 RULE/false/false/null，确认没有付费模型调用；样例必须来自所连数据库。
+3. 用“100112需要经过哪些环节”检查补位请求、原文编码、白名单与真实工具输出；数据库工序结果不回传模型。只有确实出现合规响应后，才记录本次 MODEL/true/true/null。
+4. 分别验证合规UNSUPPORTED和非法输出，确认无业务工具调用；使用本地替身验证故障，不用反复向真实服务发送非法凭据。
+5. 追加脱敏验收日志：日期、实际模型/端点、traceId、HTTP结果、耗时、参数核对、是否执行工具、未覆盖范围。真实30条混合评测另行执行，不沿用Mock准确率。
+
+本次仅核实本进程三项 MES_LLM_* 均未配置，仓库和交付记录无可核对的真实供应商请求/成功响应证据。没有搜索或复用其他应用的凭据。**配置存在、客户端测试通过、请求级 modelConnected=true，均不能单独证明真实模型全面验证。**
+
+Python 属于第9节阶段C的独立规划，本轮没有Python服务或多步Agent循环。本轮不向模型发送数据库结果；若将来允许编排访问结果，须重新审核数据范围与外发契约。回调Java必须有受限接口、短期凭据和工具白名单，不能把现有Cookie接口当作匿名工具。
 
 ## 9. 第八步：P2–P4继续开发
 
+当前有效路线为 A → 分项制造业务 B，另有满足条件即可独立启动的 C。以下未落地项都标记“计划中”；文档中拟定的范围不代表文件或接口已经存在。P2 对应 B0–B4，P3 对应 B5，P4 对应 C；不再用旧阶段编号推导功能依赖。
+
+| 阶段 | 当前状态 | 进入条件 | 完成/验证标准 |
+| --- | --- | --- | --- |
+| A / R003 Java模型适配 | 已实施；自动化及学习环境已验证 | Java8运行基线、Shiro与既有只读工具可用 | 测试通过、30条评测可复跑、真实模型验证状态明确；目前真实模型仍待验证 |
+| B0 教学主数据 | 已实施；隔离学习库已验证 | 已审核四表结构/字段、明确仅为样例及目标学习库 | 可重复SQL、6物料/1路线/6工序/6关联、冲突拒绝、不覆盖原数据 |
+| B1 BOM与只读齐套 | 计划中 | B0或经确认的物料/路线数据；先审核BOM映射和迁移；真实齐套还需B2已审核库存口径/数据 | BOM引用/版本/单位和缺料/库存不足/重码用例通过，事实与数据库一致 |
+| B2 库存模型 | 计划中 | 用户确认现存/可用/预留、单位、仓库范围和测试数据来源；可与B1分开设计 | 规则先于代码，查询与边界测试独立通过，不使用演示数字冒充真实库存 |
+| B3 工单状态机 | 计划中 | 用户先用自己的话完成一页规则，审阅后再编码；明确路线/数量/SN粒度 | 状态转换、工序顺序、不能越站条件及边界测试有独立验收 |
+| B4 报工预览与确认 | 计划中 | B3规则/状态检查及数量口径可靠；有独立权限与确认设计 | Java无写入预览→用户明确确认→事务/幂等写入；模型不能确认或直接写入 |
+| B5 受控统计 | 计划中 | 有授权且可信的事实来源、审核指标定义与数据范围 | 指标/维度/筛选白名单、SQL核对、权限/边界测试逐项通过 |
+| C / P4 Python Agent/RAG | 计划中 | ①R003稳定且Java权限/接口契约可靠；②取得本项目可用的真实SOP或质检手册PDF及明确授权 | 保留页码的检索、来源/版本/权限验证、受控跨服务调用；不依赖BOM/库存/工单全部完成 |
+
+A 的“真实模型待验证”不能隐藏；具体供应商是否稳定需补实测。C 进入前须实际审阅 Java 契约及稳定性证据，不能仅凭提交数量宣布可靠。目前没有已授权PDF或真实RAG证据，故正式文档入库和检索工作尚不能开始。
+
+### 阶段 A：R003——Java 8 大模型适配器
+
+- 保留Java8/Boot2.1.7，规则优先、模型补位；登录/专用权限、意图白名单、原文完整编码和失败降级全部由Java负责。
+- 代码和学习环境的验收见第12节；真实供应商实测按第8.2节补齐，报告真实状态即可，不能用Mock替代。
+- 当前不含多步工具循环。后续任何新增意图都要单独设计契约、权限、测试和日志，不能直接接受模型提出的工具名。
+
 ### P2：BOM齐套与报工（待接入）
 
-- **已有/复用**：`technology/entity/SpBom.java`、`SpBomItem.java`，对应Controller/Service/Mapper；物料与路线工具、Shiro权限、Result、只读查询依据。
-- **缺口**：核对并修复SpBom.materielCode→materiel_id字段映射；定义并迁移sp_bom_item；确认子项存的是物料ID还是编码、单位、损耗、工厂、版本和审核状态。现有库存、预留、工单、工序执行、报工及IPQC表和接口均缺失。
-- **文件范围（以下新增文件均为规划）**：先修正 `technology/entity/SpBom.java`、`resources/mapper/technology/SpBomMapper.xml`；增加人工审阅的 `scripts/sql/mes_p2_bom_inventory_work_report.sql`。再新增 `production/entity/WorkOrder.java`、`WorkReport.java`、`production/service/WorkReportService.java` 及对应Mapper/XML/Controller/测试，库存模块先明确可用量与预留规则；最后新增 `assistant/service/BomKittingService.java` 和预览/确认接口。当前没有自动迁移框架，不能把文件名当作会自动执行的迁移。
-- **顺序**：验证BOM主数据 → 明确可用库存=现存-预留等口径 → 受控齐套查询 → 工单及工序状态机 → 报工事务 → 助手预览/确认。数量使用BigDecimal和明确单位，不以模型计算替代业务计算。
-- **写操作统一要求**：服务器生成预览与影响说明（物料、工单、工序、数量、版本）；用户明确确认；提交时重新验身份/权限/数据范围/版本；服务端幂等键、并发控制及同一业务事务；实际持久化成功后才返回真实单号；审计谁确认、实际影响、状态及失败原因。确认不代表拥有权限，改动预览后必须重新确认。
-- **验收**：已审核指定版本BOM与库存逐项一致；缺料、无BOM、单位冲突和循环引用有明确状态；重复确认只生成一次报工；并发不超额/不负库存；无权、过期预览及事务失败不产生半成品单据。
+阶段 B 的 B0–B4 **分别立项、设计、测试、记录和提交**，不再采用一份混合 BOM/库存/工单/报工的大迁移。B1的BOM部分可先做，B2的库存规则可独立讨论；没有B2实际可用量依据时，不宣称真实齐套已完成。
+
+#### B0：伺服电机控制器样例主数据
+
+- 已有文件：`scripts/sql/servo_controller_sample.sql`、`scripts/tests/servo-controller-seed.ps1`、[独立主数据说明](伺服控制器样例主数据.md)。实际与R003同属提交9ae01c5，但文件、验证和日志单列；不是独立生产数据交付。
+- 成品、PCBA、编码器接口、散热壳体、电源连接器和线束共6物料；成品路线含6道装配/检测工序，组件未绑定制造路线时如实返回NO_ROUTE。所有记录标记教学样例，不是已审核生产规程。
+- 新机器先读SQL和目标库字段，再明确启用、执行独立探针；默认不写入，只允许脚本约定的学习库/端口，重复一致、冲突拒绝，原记录保留。没有并发业务编码唯一约束，验证不外推为并发生产安全。
+
+#### B1：BOM 数据建模与只读齐套
+
+- 目标/范围（计划中）：先核对 `mes/src/main/java/com/wangziyang/mes/technology/entity/SpBom.java`、`SpBomItem.java` 及对应Mapper/XML。当前SpBom.materielCode没有显式映射到实库materiel_id；学习库sp_bom为空、sp_bom_item缺失，不能据实体文件宣称BOM完整。
+- 先审阅BOM头/明细/物料引用、版本、审核状态、单位和数量关系，再提交**独立BOM迁移SQL**及Java映射/只读服务；不夹带库存、工单或报工表的迁移。文件名在本子项实施时确定，不声称已有可用迁移。
+- 齐套检查引用B2确认的可用库存口径，覆盖缺少组成料、库存不足、重复物料/子项、无BOM、失效引用、单位冲突和循环引用；使用明确标注的测试数据，逐项与SQL核对。不把模型计算当作齐套数量。
+
+#### B2：库存模型
+
+- 先由用户确认现存、可用、预留、库存单位/换算、仓库/工厂范围和库存时点；“可用=现存-预留”等仅是待审阅候选，不自动定为业务规则。
+- 范围（计划中）：单独的库存规则文档、库存迁移、查询服务/Mapper与测试；先规则、后表/查询。当前没有可验证库存事实表，演示看板和模拟数字不算库存依据。
+- 验收：空库存、预留边界、数量/单位精度、重复记录、跨仓库范围和并发可用量按已审规则测试；结果可解释、可追溯，独立记录Commit及回滚。
+
+#### B3：工单状态机
+
+- **编码前硬条件：用户先用自己的话写一页业务规则并审阅。** 至少说明工单状态、每种允许/禁止转换、工序顺序、不能越站条件，以及数量/SN粒度。未确认的业务选择保持“计划中”，不由Agent代替用户决定。
+- 范围（计划中）：审阅后的规则文档/状态图、工单及执行实例、独立SQL迁移、Java服务及边界测试。物料/路线定义与工单执行记录分开；工艺版本、取消/返工等规则需用户决定。
+- 验收：先以规则文档形成边界测试，再实现；不允许的转换、重复/并发动作、越站和无权限请求不能改状态。每个已实施的转换分别留验收记录。
+
+#### B4：报工预览与确认
+
+- 未来模型最多提出 `preview_work_report` 意图；该意图当前尚未注册。Java校验参数、工序/工单状态、数量/单位及用户权限，再产生**不写入生产事实的预览**。
+- 用户在独立步骤明确确认后，才允许另一个受控请求进入真实写入。Java重新检查权限、数据范围、状态/版本/数量，以事务和幂等机制保护；模型输出、提示词或先前预览不代替用户确认。
+- 范围（计划中）：独立预览与确认契约、Java业务服务/迁移、确认界面和测试；具体预览标识、有效期及幂等方案在B4审阅后确定。不得把两步合并为模型自动确认。
+- 验收：未确认零写入；无权限/过期或变化的预览不能提交；重复确认只产生一次真实记录；并发、超量、单位错误和事务故障无半成品单据。只有持久化成功才返回真实结果。
 
 ### P3：受控ChatBI（待接入）
 
-- **已有/复用**：MyBatis分页/参数查询、ECharts资源和演示看板、助手权限与依据卡；看板假数据不作为统计来源。
-- **缺口**：P2及质检的真实事实表，工厂/车间数据范围，时间、时区、投入数、检验数、良品/不良、返工和FPY等口径；目前没有可验证的生产统计基础。
-- **文件范围（规划）**：新增 `assistant/bi/ControlledBiRequest.java`、`QualityMetricsService.java`、对应Mapper及 `resources/mapper/assistant/QualityMetricsMapper.xml` 和测试，新增审核过的报表接口；扩展现有 `mes-assistant.js` 只渲染后端结构化统计及分母/分子，不执行模型返回的脚本。
-- **顺序**：明确一项指标及SQL → 单独验证边界数据和权限 → 封装具名工具 → 模型将问句映射为指标名/时间范围 → 展示结果与来源。先做一项受控指标，避免通用NL2SQL。
-- **限制**：表、列、指标、维度、排序和时间范围都由Java白名单决定；参数化SQL，行数/时间上限和数据范围过滤；禁止模型生成的任意SQL进入数据库、禁止整表导出和越权聚合。
-- **验收**：固定数据集统计与人工SQL核对一致；0分母、无数据、时区边界、歧义和超时有明确处理；展示统计范围、计算公式和来源；图表使用真实数值坐标轴，不使用“不良率×35”放大冒充占比。根因推测标为待验证建议。
+#### B5：受控统计
+
+- 进入条件：选定一个可信且有授权的事实来源，用户审核指标定义、分母分子、允许维度、筛选条件、时间/时区和查询范围。来源可由相应制造子项提供，不要求机械等待全部B1–B4完成。
+- 范围（计划中）：每项指标独立的Java白名单查询、Mapper/参数化SQL、具名工具、结构化结果和测试。演示ECharts看板只可复用显示能力，演示值不能成为真实统计输入。
+- 模型只能映射指标名与受限参数，不能选择任意表/列、拼接SQL、扩大数据范围或输出可执行脚本。每项设置行数/耗时限制并执行Java权限过滤。
+- 验收：与人工SQL结果一致，覆盖0分母、无数据、边界日期、错误参数、越权、超时和截断；显示范围、来源与计算口径。各指标分别记录目标/代码/测试/Commit/回滚，不把根因建议写成已证实事实。
 
 ### P4：有来源RAG（待接入）
 
-- **已有/复用**：抽屉的文本与依据折叠展示、工具和权限边界；目前没有可复用的已建知识库。
-- **缺口**：经过授权、版本明确的伺服电机控制器SOP/质检/设备资料；解析/切分/Embedding/向量存储、索引任务、文档权限、检索质量集与引用校验。HTML里的FANUC内容/ChunkID/相似度均为原型示意，不是已索引资料。
-- **文件范围（规划）**：如选择Python，新增 `agent/pyproject.toml`、`agent/app/main.py`、`retrieval.py`、`agent/tests/`；Java侧新增 `assistant/service/KnowledgeSearchClient.java` 和检索来源DTO。另建文档元数据/导入任务的SQL与管理接口，扩展 `mes-assistant.js` 的来源卡。不在旧单体内加入未经验证的新Starter。
-- **顺序**：选一份真实文档建立版本/访问范围 → 解析保留页码 → 带文档ID/版本/页码切块 → 向量化 → 检索与阈值验证 → 基于证据生成回答 → 来源跳转及无依据拒答。
-- **验收**：问题可复现地命中实际文档片段，显示文档名/版本/页码/片段；无相关资料时如实说明；检索失败不靠模型记忆冒充手册；删除/升级文档后索引同步；用户无法检索无权限资料；实际处置仍遵循现场规程，不让猜测变成自动业务指令。
+阶段 C 是**独立 Python Agent / RAG 子项目**；不再以P1–P3全部完成为前提，主要依赖授权文档和可靠Java契约。进入条件必须同时满足：
+
+1. R003已稳定，Java登录、权限和接口契约经验证可靠；具体跨服务身份/数据范围契约须先审阅，不把当前浏览器Cookie接口当匿名工具。
+2. 已取得可用于本项目的真实SOP或质检手册PDF，并有明确授权、版本、访问范围和数据处理边界。未取得授权文档时，**不开始正式入库、Embedding或检索**；原型中的FANUC片段/ChunkID不算授权资料或检索证据。
+
+职责和计划范围：Python独立服务负责PDF解析、保留页码/文档ID/版本的切块、Embedding、检索和LangGraph多工具编排；Java继续负责身份认证、业务权限、结构化查询和生产数据写入。当前无Python服务、索引或多工具循环，不把这一段写成已实施。
+
+跨服务采用受控HTTP契约，携带 `requestId`、用户数据范围和服务器签发的短期签名上下文；Java校验签名/过期、请求用户、数据范围和工具白名单，防伪造/越权。当前Java已有请求追踪字段名是 `traceId`；未来契约须明确两者映射，不能声称已有 `requestId` 签名机制。Python不直接连接MES数据库，不转交管理员账号、长期Cookie或生产写入凭据；需要写入仍走Java独立确认/事务/幂等边界。
+
+验收顺序（计划中）：授权与版本清单→保留页码解析→可复现切块/索引→带来源的检索评测→无依据拒答→越权/伪造/过期上下文拒绝→LangGraph工具次数/超时边界。回答显示文档名、版本、页码/片段；删除/换版后验证索引一致性，不靠模型记忆冒充手册。所选Python依赖、向量库、具体文件布局与迁移另行设计，不预先宣称Milvus等已接入。
+
+若用户希望提前练习LangGraph，可在仓库外单独建立教学Demo，使用模拟Java工具和明确标记的教学资料；它不影响主线、不计为正式RAG入库或真实制造业务验收。本次仅记录这一选项，没有创建Demo。
+
+### 每个子项独立留痕
+
+A、B0、B1、B2、B3、B4、B5、C分别在 [持续改造日志](MES_REFACTOR_JOURNAL.md) 记录：状态（计划中/进行中/已实施/已验证）、目标与进入条件、用户已审业务规则、代码/SQL范围、数据来源、实际测试命令/结果、未覆盖范围、实际已提交SHA，以及代码与数据各自的回滚方式。未来Commit仅在确实提交后填写，不用计划勾选或提交动作替代验证。
 
 ## 10. 构建、测试与故障排查
 
@@ -403,6 +539,40 @@ mvn -f mes/pom.xml '-Dtest=MesAssistantDatabaseIT' '-Dmes.it.enabled=true' `
 
 本轮没有扩大到修复整站所有遗留安全问题：旧Boot/Shiro、口令散列和原业务接口的权限粒度仍需专项治理。助手新增权限不等于原系统已完成安全升级。
 
+### 10.3 无付费模型的故障模拟与评测
+
+先按第3节选择JDK8和本机Maven；以下隔离测试不需要MySQL、模型Key或另启Python。首次下载Maven依赖仍需网络，不能把“不调用模型”理解为构建完全不联网。
+
+```powershell
+# 30项客户端替身 + 2项评测/错码夹具测试；不读取真实供应商凭据
+mvn -f mes/pom.xml '-Dtest=LlmIntentClientTest,AssistantIntentEvaluationTest' test
+# 调度、权限、原文参数与默认状态回归（可单独执行）
+mvn -f mes/pom.xml '-Dtest=MesAssistantHybridTest,MesAssistantControllerTest,SpLoginFormFilterTest' test
+node --test scripts/tests/mes-assistant.test.cjs
+# 查看本次离线结果（不替换Git中的R003历史快照）
+Get-Content .\mes\target\assistant-eval\rules-evaluation.json -Raw
+```
+
+`LlmIntentClientTest` 在测试进程内启动回环HttpServer和假Key，模拟正常内容、401/429/5xx（含无响应体）、连接拒绝/读取超时、非法/空/过长JSON、字段/类型/意图错误、重定向与响应被丢弃；连接超时另用确定性传输故障注入。`MesAssistantHybridTest` 用模拟客户端验证原文错码、大小写/子串/分隔符、常用词编码、多码、缺码、标点/控制字符和失败后规则仍可用。测试方法和每种状态以源码/Surefire结果为准，不能把这批模拟状态说成真实供应商故障已实测。
+
+评测输入是 `mes/src/test/resources/assistant/intent-eval.jsonl`，共30条，覆盖查询/同义句、缺码、非法码、范围外、SQL/提示注入、多码/指代、空值/过长/特殊输入；样例明确标注现有学习数据、SERVO教学数据或合成输入。E13/E26的额外错码夹具由独立mock测试回放，不是模型实际作答。
+
+执行器为 `mes/src/test/java/com/wangziyang/mes/assistant/AssistantIntentEvaluationTest.java`。原规则冻结在测试包 `legacy/LegacyR002Rules.java`（来自781ed2d），另一侧执行R003规则优先逻辑并禁用模型；工具为模拟服务，不读取工艺事实。结果输出到 `mes/target/assistant-eval/rules-evaluation.json`；R003提交中的原始测量见 [归档JSON](evals/R003-rules-offline.json)。
+
+| 指标（R003归档） | R002原规则 | R003规则优先、模型禁用 | 规则+真实模型 |
+| --- | --- | --- | --- |
+| 意图/可执行决策准确率 | 22/30，73.33% | 24/30，80.00% | 未执行，不推测 |
+| 可执行编码准确率 | 6/12，50.00% | 6/12，50.00% | 未执行 |
+| 错误工具调用数 | 1 | 0 | 未执行 |
+| 澄清率 | 6/30，20.00% | 10/30，33.33% | 未执行 |
+| 模型实际调用比例 | 0/30，0% | 0/30，0% | 未执行 |
+| 需模型补位候选 | 不适用 | 6/30，20.00% | 未执行 |
+| 平均本机函数耗时 | 0.459907ms | 0.245840ms | 未执行 |
+
+意图标签为 QUERY_MATERIAL_ROUTING / NEEDS_CLARIFICATION / UNSUPPORTED / INVALID_INPUT / HELP；NEEDS_INPUT和AMBIGUOUS均计澄清。编码分母是12条应查询且给出编码的样例，只有实际传入工具的完整编码正确才计分。错误调用统计不允许调用或传错编码；六条需要补位的同义句在无模型时澄清，不计识别/编码正确。R002的1次错误调用为E17“忽略规则”问句，R003由Java拒绝。
+
+耗时仅30次本机函数执行（包含模拟工具/测试开销），不是HTTP、数据库或真实模型延迟，也不足以推出稳定性能提升。本次文档同步重跑32项测试和11项Node测试通过，决策计数与归档一致；平均耗时会变化，保留原快照而不改写R003历史。真实混合方案准确率、错误调用数、调用比例和端到端延迟均须获得凭据后另测。
+
 ## 11. R002 历史验证记录与交付定位
 
 审查起点：`agent` / `3d4433c`；origin未有agent分支，origin/master为`37ce2dc`。参考助手为origin/feature/mes-assistant-chat-ui `738723d`，未整体合并该分支。
@@ -443,3 +613,7 @@ git ls-remote --heads origin agent
 2026-10-27：原生 JDK 1.8.0_202 / Maven 3.6.3，完整 package 的 112 项 Java 测试通过（含 30 项 HTTP 替身）；显式真实学习库只读 IT 1 项、Node 11 项、启动路径与种子 SQL 探针通过。最终新 jar 在 9090 启动，浏览器验证码登录、SERVO-DEMO-CTRL-001 六工序和 MODEL_NOT_CONFIGURED 降级显示通过。
 
 30 条规则评测：R002 22/30、R003 无模型侧 24/30，错误工具调用 1→0；这不是混合真实模型准确率。模型配置与凭据均缺失，真实供应商实测待验证。请求元数据、逐条评测快照、文件清单和风险见 [R003报告](R003模型适配与评测报告.md)；样例主数据独立见 [主数据说明](伺服控制器样例主数据.md)。
+
+证据对应代码提交 `9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c`。原包构建日志结束于2026-10-27 11:22:56、显式IT结束于11:25:44；本机忽略目录 `.local/r003-final-package.log`、`r003-database-it.log` 与Surefire XML保留了112+1的结果，新电脑应按本指南自行复跑。这是历史验收，不表示本次仅改文档又执行了完整package、生产部署或真实模型验证。
+
+本次同步仅修改既有三份文档，重新执行30项客户端测试+2项评测测试与11项Node测试，均通过；11:42:11评测均值为原规则0.383370ms、R003模型禁用0.225513ms，决策计数与归档一致。只读复核学习库样例数量仍为6/1/6/6，sp_bom为空、sp_bom_item缺失；没有新增业务写入、迁移或Python/RAG代码。
