@@ -9,3 +9,16 @@
 /sparchetype/.mvn/
 /.idea/
 /.idea/
+
+# R004 Python runtime / private document data
+/agent/.venv/
+/agent/.env
+/agent/.env.*
+!/agent/.env.example
+/agent/data/
+/agent/.pytest_cache/
+/agent/.ruff_cache/
+**/__pycache__/
+*.py[cod]
+/agent/*.egg-info/
+/agent/dist/

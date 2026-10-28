@@ -12,6 +12,42 @@ New-Item -ItemType Directory -Path $runtime -Force | Out-Null
 function Write-Utf8([string]$Path, [string]$Content) {
     [System.IO.File]::WriteAllText($Path, $Content, $utf8)
 }
+function Import-AgentSettings([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    $allowed = @('MES_AGENT_ENABLED', 'MES_AGENT_BASE_URL', 'MES_AGENT_SHARED_SECRET', 'MES_AGENT_CONNECT_TIMEOUT_MS', 'MES_AGENT_READ_TIMEOUT_MS')
+    $settings = @{}
+    foreach ($line in [IO.File]::ReadAllLines($Path)) {
+        if ($line -notmatch '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$') { continue }
+        $name = $Matches[1]
+        if ($allowed -cnotcontains $name) { continue }
+        $value = $Matches[2].Trim()
+        if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        if ($value -match '[\x00-\x1f\x7f]') { throw "Invalid control character in $name." }
+        switch ($name) {
+            'MES_AGENT_ENABLED' {
+                if ($value -cnotin @('true', 'false')) { throw 'MES_AGENT_ENABLED must be true or false.' }
+            }
+            'MES_AGENT_SHARED_SECRET' {
+                if ($value.Length -lt 32 -or $value.Length -gt 1024 -or [string]::IsNullOrWhiteSpace($value)) { throw 'MES_AGENT_SHARED_SECRET must contain 32 to 1024 characters.' }
+            }
+            'MES_AGENT_BASE_URL' {
+                $uri = $null
+                if (-not [Uri]::TryCreate($value, [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -notin @('http', 'https') -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or $uri.AbsolutePath -ne '/' -or $uri.Port -eq 0) {
+                    throw 'MES_AGENT_BASE_URL must be a loopback HTTP root URL.'
+                }
+                if ($value -notmatch '^https?://(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]+)?/?$') { throw 'MES_AGENT_BASE_URL must use localhost, 127.0.0.1 or ::1.' }
+            }
+            default {
+                $milliseconds = 0
+                if (-not [int]::TryParse($value, [ref]$milliseconds) -or $milliseconds -lt 1 -or $milliseconds -gt 60000) { throw "$name must be between 1 and 60000 milliseconds." }
+            }
+        }
+        $settings[$name] = $value
+    }
+    foreach ($name in $settings.Keys) { [Environment]::SetEnvironmentVariable($name, $settings[$name], 'Process') }
+}
 function Test-LocalPort([int]$Port) {
     $client = New-Object System.Net.Sockets.TcpClient
     try {
@@ -56,6 +92,7 @@ if (-not (Test-Path -LiteralPath $secretFile)) {
 }
 $secrets = Get-Content -LiteralPath $secretFile -Raw | ConvertFrom-Json
 $env:MES_DB_PASSWORD = $secrets.appPassword
+Import-AgentSettings (Join-Path $runtime 'agent.env')
 
 $mysqlConfig = Join-Path $runtime 'mysql.ini'
 $mysqlData = Join-Path $runtime 'mysql-data'

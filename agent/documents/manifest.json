@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "authorization": {
+    "source": "User explicitly authorized these 24 local PDFs for this project, indexing and public-scoped citations in the Codex conversation on 2026-10-27.",
+    "note": "Scope public is document access scope; MES login and internal request authentication remain required. Original PDFs are external inputs, not Git assets."
+  },
+  "documents": [
+    {
+      "documentId": "doc-fb31f3e4987e52f9",
+      "filename": "01_智能制造典型场景参考指引_2025年版.pdf",
+      "sha256": "8a9a6206416d1e452d5fae6e64cc1cd5501cb06a648667114417304833e3ea69",
+      "scope": "public",
+      "version": "2025年版",
+      "approved": true,
+      "category": "policy-or-standard-guidance"
+    },
+    {
+      "documentId": "doc-0d8d6936a98138a8",
+      "filename": "02_国家智能制造标准体系建设指南_2024版.pdf",
+      "sha256": "2c3b1ed609a623d97ea21f1e925907da5380c773bca1aa1e29ed01f66841fae8",
+      "scope": "public",
+      "version": "2024版",
+      "approved": true,
+      "category": "policy-or-standard-guidance"
+    },
+    {
+      "documentId": "doc-08f2698c5a5e100a",
+      "filename": "03_制造业企业数字化转型实施指南.pdf",
+      "sha256": "5802fdcf49bbb64ef836e5fb812470e149ac901b0dd1e39ab6ef9defba151ee6",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "policy-or-standard-guidance"
+    },
+    {
+      "documentId": "doc-4b100188ad1539b0",
+      "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+      "sha256": "bddfaa57ec764cadbdaab42ec676e7e256dee21960a697974e8509fdbed20653",
+      "scope": "public",
+      "version": "试行",
+      "approved": true,
+      "category": "policy-or-standard-guidance"
+    },
+    {
+      "documentId": "doc-fe52eb252ff1c235",
+      "filename": "05_十四五智能制造发展规划.pdf",
+      "sha256": "d61e596a245d601916206d31a6e3b8dd997754692182b794a98c2a6bdb3db816",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "policy-or-standard-guidance"
+    },
+    {
+      "documentId": "doc-a0fbd3a8f2f254ac",
+      "filename": "06_机械与电气工程学院实验室安全操作规程汇编_西昌学院.pdf",
+      "sha256": "e61c751e3a42aeb61a2c5a93c8c2eba70a7c06621a46092a9a63d54b715e4efb",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-96bd7888d31e67ae",
+      "filename": "07_工程训练中心学生指导手册_华侨大学.pdf",
+      "sha256": "7894a92f33f31b67fe51baaec08c5ed16ad14a5f9524ac21f2cbe0b3f7827964",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-209f916c9802b594",
+      "filename": "08_数控车工操作规程_武汉职业类院校.pdf",
+      "sha256": "f80d43bedd0c8a9302cf211ba3ef91ca92d47ade16d7fdc161fbf3d525092744",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-28ee28e01418a55e",
+      "filename": "ADB_Volume_1_精密工程与机械加工.pdf",
+      "sha256": "209ef726f9e648e9b84bde1c9bbfaa4c60551bdf59e7197958cd3d970a6665a8",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-1729efebeb854b01",
+      "filename": "ADB_Volume_2_机电一体化技术.pdf",
+      "sha256": "f7620d177068daac08ea5ebceffa6a11386dfc020098c72a826a9c8964fec8a9",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-2bdc6d66e675b9b5",
+      "filename": "ERPNext_Bill_of_Materials.pdf",
+      "sha256": "7c10fbe1f30c340d7aba09b0df808f3e8a456122caab7b99451ef04349052591",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "erp-documentation"
+    },
+    {
+      "documentId": "doc-07bf4c3179ff8b4f",
+      "filename": "ERPNext_Manufacturing.pdf",
+      "sha256": "90905f087e9da7acca593b81367ea1e702d220d9a385a6345a103df2f32819f7",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "erp-documentation"
+    },
+    {
+      "documentId": "doc-ec2fab3830f264a3",
+      "filename": "ERPNext_Production_Analytics.pdf",
+      "sha256": "e8f53371db7607c3f866ca118948f2958f88e94f6ccc064a633c87a5b39dd476",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "erp-documentation"
+    },
+    {
+      "documentId": "doc-04d66f8a8dca521c",
+      "filename": "ERPNext_Quality_Review.pdf",
+      "sha256": "68c3871d1c1daca24994c1474f538ee172ab68f6fc44a219a339f7858fb19ecb",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "erp-documentation"
+    },
+    {
+      "documentId": "doc-de33ffabbb6098d8",
+      "filename": "ERPNext_Work_Order.pdf",
+      "sha256": "91053a886847cdcfe8f72f95848b8eea8b82fc536e28f23a8d085088d13777af",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "erp-documentation"
+    },
+    {
+      "documentId": "doc-9f4000f499dcf6aa",
+      "filename": "NIST_AMS_200-1_Smart_Manufacturing_Test_Bed_Design.pdf",
+      "sha256": "4a8ba0ac4b739bc26cd95984a75386b636c123dcab57fdbd35b181dcedd0fbdf",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "manufacturing-research"
+    },
+    {
+      "documentId": "doc-fa3dd76b711974cb",
+      "filename": "NIST_AMS_200-2.pdf",
+      "sha256": "e03b99b2d03e1cffa206d9303bec665cbfbc7bc458aa91f58e01d60aa6678e12",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "manufacturing-research"
+    },
+    {
+      "documentId": "doc-b890b9208febe895",
+      "filename": "NIST_AMS_300-10_制造数据可信性与追溯.pdf",
+      "sha256": "e494265d4b0fe4d3912a2fbb9009634866ece76d067385e588f485b8504695c7",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "manufacturing-research"
+    },
+    {
+      "documentId": "doc-ce7400d178d4a10b",
+      "filename": "NIST_AMS_300-11_制造数据采集与维护.pdf",
+      "sha256": "3e431974aaa2c784ad12bea2a77b8932b5f819c779b5b06e9c8d0bfd0924bafc",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "manufacturing-research"
+    },
+    {
+      "documentId": "doc-27de730b389320f0",
+      "filename": "NIST_MESA_MOM_CMM_User_Guide.pdf",
+      "sha256": "f3e6a76f0009ad31f951176c456cb008b0d735085436e3d883f4272c99e191ae",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "manufacturing-research"
+    },
+    {
+      "documentId": "doc-9ae993c152761318",
+      "filename": "OSHA_3120_锁定挂牌.pdf",
+      "sha256": "3ea7380fa10860417ed30720eaf8beb7a85d106e3dafb97b880001df6552767b",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-6a03713bef4b1615",
+      "filename": "OSHA_3132_过程安全管理.pdf",
+      "sha256": "a7a2cc40256e0f93579e9c8d87bd1c96bb23eda470022f38eb0b4b916c8ab6b5",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-cf28c068a0c199b3",
+      "filename": "OSHA_3133_过程安全管理合规指南.pdf",
+      "sha256": "175ece1d9c5d937f0aa459c67b93c9175109f7774ab941e60331821f464c01a9",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    },
+    {
+      "documentId": "doc-71004501cbc46c4c",
+      "filename": "OSHA_3170_机械防护.pdf",
+      "sha256": "fab230fb8ab519771715af0cac111dc8f446c350b80800da20483823d431dcb7",
+      "scope": "public",
+      "version": "unknown",
+      "approved": true,
+      "category": "safety-or-training-reference"
+    }
+  ]
+}

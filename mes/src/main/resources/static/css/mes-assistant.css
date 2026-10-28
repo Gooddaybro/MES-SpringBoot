@@ -25,6 +25,12 @@
 .mes-ai-widget .mes-ai-evidence summary { cursor: pointer; color: #006c62; font-size: 13px; }
 .mes-ai-widget .mes-ai-evidence pre { font: inherit; white-space: pre-wrap; margin-top: 7px; overflow-wrap: anywhere; }
 .mes-ai-widget .mes-ai-copy { margin: 5px 6px 0 0; }
+.mes-ai-widget .mes-ai-rag-state { color: #285b55; background: #edf7f4; padding: 7px; font-size: 12px; border-radius: 5px; }
+.mes-ai-widget .mes-ai-citations { margin: 12px 0; font-size: 13px; }
+.mes-ai-widget .mes-ai-citation { margin: 7px 0; border: 1px solid #c8ded9; border-radius: 5px; padding: 8px; background: #f8fbfa; }
+.mes-ai-widget .mes-ai-citation summary { cursor: pointer; color: #006c62; overflow-wrap: anywhere; }
+.mes-ai-widget .mes-ai-citation-version { color: #53676d; margin-top: 6px; }
+.mes-ai-widget .mes-ai-citation-quote { margin: 7px 0 0; padding-left: 9px; border-left: 3px solid #a7cbc1; white-space: pre-wrap; font-size: 13px; }
 .mes-ai-widget .mes-ai-clipboard { position: fixed; left: -9999px; width: 1px; height: 1px; }
 .mes-ai-widget .mes-ai-shortcuts { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 14px 4px; }
 .mes-ai-widget .mes-ai-shortcuts button { background: #eff8f6; color: #006c62; border: 1px solid #c8ded9; border-radius: 16px; padding: 4px 10px; font-size: 13px; }

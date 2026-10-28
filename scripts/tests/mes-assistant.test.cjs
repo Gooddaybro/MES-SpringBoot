@@ -147,3 +147,44 @@ test('per-request model recognition and failure metadata are visible and copied 
     modelAttempted: true, modelConnected: true, fallbackReason: null } });
   assert.ok(app.nodes.messages.textContent.includes('本次响应校验通过'));
 });
+
+test('RAG citation filename version physical page and quote stay text and are copied', async () => {
+  const app = setup(), attack = '<img src=x onerror=alert(1)>';
+  app.submit('质量管理文档有哪些原则？');
+  app.requests[0].resolve({ code: 0, data: { status: 'SUCCESS', mode: 'rag', answer: '真实原文',
+    agentExecuted: true, agentFramework: 'LANGGRAPH', retrievalStatus: 'SUCCESS',
+    answerMode: 'EXTRACTIVE_NO_MODEL', llmConfigured: false, modelAttempted: false,
+    modelConnected: false, recognitionSource: 'RULE', citations: [{ documentId: 'doc-1',
+      filename: attack + '.pdf', documentVersion: '2025年版', pageNumber: 3,
+      quote: attack + '原文依据', chunkId: 'c1', scope: 'public', score: 0.8 }] } });
+  assert.ok(app.nodes.messages.textContent.includes(attack + '.pdf'));
+  assert.ok(app.nodes.messages.textContent.includes('PDF第3页'));
+  assert.ok(app.nodes.messages.textContent.includes('2025年版'));
+  assert.ok(app.nodes.messages.textContent.includes('未配置聊天模型'));
+  assert.equal(walk(app.nodes.messages).some(x => x.tagName === 'img'), false);
+  const button = walk(app.nodes.messages).filter(x => x.tagName === 'button' && x.textContent === '复制回答').at(-1);
+  button.emit('click'); await Promise.resolve();
+  assert.ok(app.copied[0].includes('PDF第3页') && app.copied[0].includes('原文依据'));
+});
+
+test('conversation UUID persists for followups and changes when clear aborts current work', () => {
+  const app = setup(); app.submit('质量管理文档有哪些原则？');
+  const firstId = app.requests[0].options.data.conversationId;
+  assert.match(firstId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  app.requests[0].resolve({ code: 0, data: { answer: '原文依据' } });
+  app.submit('它有哪些要求？');
+  assert.equal(app.requests[1].options.data.conversationId, firstId);
+  app.nodes.clear.emit('click');
+  app.submit('重新查询质量文档');
+  assert.notEqual(app.requests[2].options.data.conversationId, firstId);
+});
+
+test('hybrid partial answer preserves authorized Java steps without undefined database IDs', () => {
+  const app = setup(); app.submit('查询100112工艺路线及质量文档');
+  app.requests[0].resolve({ code: 0, data: { status: 'PARTIAL_SUCCESS', mode: 'hybrid', answer: '部分结果',
+    recognitionSource: 'RULE', agentExecuted: true, retrievalStatus: 'NO_MATCH',
+    material: { code: '100112', name: '示例' }, routing: { code: 'R1', name: '路线' },
+    steps: [{ order: 1, code: 'S1', name: '测试工序' }], citations: [] } });
+  assert.ok(app.nodes.messages.textContent.includes('S1'));
+  assert.equal(app.nodes.messages.textContent.includes('undefined'), false);
+});

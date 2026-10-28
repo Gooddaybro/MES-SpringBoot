@@ -20,6 +20,8 @@ public class MesAssistantService {
     private static final Pattern HELP = Pattern.compile("(?i)(帮助|你好|您好|怎么用|我?能做什么|功能|help|hello|hi)[!！?？。]*");
     private static final Pattern OVERRIDE_OR_SQL = Pattern.compile("忽略|无视|绕过|越权|系统提示|提示词|冒充|假装|(?i)(?<![A-Za-z0-9._/-])(ignore|override|system|prompt|sudo|select|union|exec|sql)(?![A-Za-z0-9._/-])");
     private static final Pattern INVALID_CONTROL = Pattern.compile("[\\p{Cc}&&[^\\s]]");
+    private static final Pattern KNOWLEDGE = Pattern.compile("文档|知识|手册|规程|安全|防护|标准|规范|(?i)(?<![A-Za-z0-9._/-])(sop|pdf|manual|knowledge|safety)(?![A-Za-z0-9._/-])");
+    private static final Pattern MATERIAL_ROUTING_REQUEST = Pattern.compile("物料(?:的)?(?:工艺|工序|路线)|物料编码|(?:查询|查看|查找|获取|查)(?:这|该|一个|当前|现有|一下|的|\\s)*(?:工艺路线|路线|工序)");
 
     private final MaterialRoutingService routing;
     private final LlmIntentClient llm;
@@ -35,18 +37,13 @@ public class MesAssistantService {
     }
 
     public Map<String, Object> chat(String message) {
-        if (message == null || message.trim().isEmpty() || message.length() > 1000) {
-            return reply("INVALID_INPUT", "请输入1至1000个字符的问题。");
-        }
-        if (INVALID_CONTROL.matcher(message).find()) {
-            return reply("INVALID_INPUT", "问题含不支持的控制字符，请提供原始完整的有效物料编码。");
+        Map<String, Object> invalid = validateReadOnlyQuestion(message);
+        if (invalid != null) {
+            return invalid;
         }
         String question = message.trim();
-        if (WRITE.matcher(question).find() || OVERRIDE_OR_SQL.matcher(question).find()) {
-            return reply("UNSUPPORTED", "当前助手仅支持只读查询，无法执行删除、修改、创建、报工、下发、报修等写操作。");
-        }
         if (HELP.matcher(question).matches()) {
-            return reply("HELP", "当前助手规则优先，可输入物料编码或询问工艺路线。未解决的单编码问句在服务端配置模型后可辅助识别；只发送本次问题，不发送数据库结果。BOM、报工和知识库尚未接入；仅支持只读查询。");
+            return reply("HELP", "当前助手规则优先，可输入物料编码或询问工艺路线；可按权限检索安全文档与操作规程。知识结果会注明来源页码，未配置聊天模型时仅提供原文摘录；BOM与库存尚未接入，仅支持只读查询。");
         }
         if (AssistantResponses.validMaterialCode(question)) {
             return query(question, "RULE", false, false);
@@ -95,6 +92,40 @@ public class MesAssistantService {
             return fallback(intent.isAttempted(), "MODEL_INVALID_PARAMETERS");
         }
         return query(intent.getMaterialCode(), "MODEL", true, true);
+    }
+
+    /** Permission selection only: this method performs no query or model call. */
+    public static String agentIntentHint(String message) {
+        if (message == null || message.length() > 1000 || message.trim().isEmpty()) return null;
+        if (AssistantResponses.validMaterialCode(message.trim()) || !KNOWLEDGE.matcher(message).find()) return null;
+        if (ROUTING.matcher(message).find()) {
+            MaterialCodeCandidates candidates = new MaterialCodeCandidates(message);
+            if (!candidates.isValid() || !candidates.getCodes().isEmpty() || MATERIAL_ROUTING_REQUEST.matcher(message).find()) return "COMPOSITE";
+        }
+        return "KNOWLEDGE";
+    }
+
+    public static boolean canBeKnowledgeFollowup(String message) {
+        if (validateReadOnlyQuestion(message) != null) return false;
+        String question = message.trim();
+        if (AssistantResponses.validMaterialCode(question) || HELP.matcher(question).matches()
+                || ROUTING.matcher(question).find() || WORK_ORDER.matcher(question).find() || UNSUPPORTED.matcher(question).find()) return false;
+        MaterialCodeCandidates candidates = new MaterialCodeCandidates(message);
+        return candidates.isValid() && candidates.getCodes().isEmpty();
+    }
+
+    public static Map<String, Object> validateReadOnlyQuestion(String message) {
+        if (message == null || message.trim().isEmpty() || message.length() > 1000) {
+            return AssistantResponses.reply("INVALID_INPUT", "rule-based", "请输入1至1000个字符的问题。");
+        }
+        if (INVALID_CONTROL.matcher(message).find()) {
+            return AssistantResponses.reply("INVALID_INPUT", "rule-based", "问题含不支持的控制字符，请提供原始完整的有效物料编码。");
+        }
+        String question = message.trim();
+        if (WRITE.matcher(question).find() || OVERRIDE_OR_SQL.matcher(question).find()) {
+            return AssistantResponses.reply("UNSUPPORTED", "rule-based", "当前助手仅支持只读查询，无法执行删除、修改、创建、报工、下发、报修等写操作。");
+        }
+        return null;
     }
 
     private Map<String, Object> query(String code, String source, boolean attempted, boolean connected) {
