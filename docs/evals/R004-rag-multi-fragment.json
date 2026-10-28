@@ -1,0 +1,105 @@
+{
+  "measuredAt": "2026-10-27T16:19:33.030045+00:00",
+  "datasetSha256": "0fa954040f7f7a778a1a97fa0c9385a90129965d5c93564575be81d271b85b59",
+  "mode": "REAL_JINA_CHROMA_EXTRACTIVE_NO_CHAT_MODEL",
+  "reranker": "LOCAL_BM25_TOP30_COSINE_0.65_BM25_0.35",
+  "embeddingModel": "jina-embeddings-v3",
+  "dimensions": 512,
+  "topK": 5,
+  "minSimilarity": 0.38,
+  "summary": {
+    "caseCount": 1,
+    "answerableCases": 1,
+    "boundaryCases": 0,
+    "passed": 1,
+    "documentRecallAt5": 1.0,
+    "physicalPageRecallAt5": 1.0,
+    "expectedEvidenceCoverageAt5": 1.0,
+    "boundaryStatusAccuracy": null,
+    "allReturnedQuotesMatchPdfPages": true,
+    "wrongToolCalls": 0,
+    "chatModelCalls": 0,
+    "chatModelAccuracy": null,
+    "embeddingRequests": 1,
+    "medianElapsedMs": 953,
+    "p95ElapsedMs": 953,
+    "totalElapsedMs": 953,
+    "vectorCount": 1635
+  },
+  "results": [
+    {
+      "id": "R004-X01",
+      "question": "质量管理数字化实施指南的推进主线是什么，同时要求把握哪四项原则？请结合不同页的原文。",
+      "status": "SUCCESS",
+      "expectedStatus": "SUCCESS",
+      "passed": true,
+      "documentHitAt5": true,
+      "pageHitAt5": true,
+      "expectedEvidencePresent": true,
+      "expectedDistinctPagesRetrieved": 2,
+      "allQuotesExactInPhysicalPdfPage": true,
+      "elapsedMs": 953,
+      "toolCalls": [
+        {
+          "name": "search_sop_knowledge",
+          "status": "SUCCESS",
+          "elapsedMs": 935
+        }
+      ],
+      "modelAttempted": false,
+      "modelConnected": false,
+      "citations": [
+        {
+          "documentId": "doc-4b100188ad1539b0",
+          "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+          "documentVersion": "试行",
+          "pageNumber": 1,
+          "chunkId": "doc-4b100188ad1539b0:bddfaa57ec764cad:p1:c0",
+          "quote": "1\n制造业质量管理数字化实施指南\n（试行）\n制造业质量管理数字化是通过新一代信息技术与全面\n质量管理融合应用，推动质量管理活动数字化、网络化、智\n能化升级，增强产品全生命周期、全价值链、全产业链质量\n管理能力，提高产品和服务质量，促进制造业高质量发展的\n过程。为推动制造业质量管理升级，以数字化赋能企业质量\n管理，强化产业链质量协同，优化质量创新生态，特制定本",
+          "score": 0.6736113429069519,
+          "scope": "public"
+        },
+        {
+          "documentId": "doc-4b100188ad1539b0",
+          "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+          "documentVersion": "试行",
+          "pageNumber": 2,
+          "chunkId": "doc-4b100188ad1539b0:bddfaa57ec764cad:p2:c0",
+          "quote": "2\n部门以及企业间的合作壁垒，赋能企业多样化产品创新、精\n细化生产管控、高附加值服务开发、个性化体验提升，快速\n有效应对不确定性变化，不断构建差异化竞争优势。\n（二）加快三大转变。加快重塑数字时代质量发展理念，\n推动质量管理范围从企业质量管控向生态圈协作转变，加强\n对产品全生命周期、产业链供应链乃至生态圈协作质量的管\n理；推动质量管理重点环节从以制造过程为主",
+          "score": 0.6170195937156677,
+          "scope": "public"
+        },
+        {
+          "documentId": "doc-4b100188ad1539b0",
+          "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+          "documentVersion": "试行",
+          "pageNumber": 6,
+          "chunkId": "doc-4b100188ad1539b0:bddfaa57ec764cad:p6:c0",
+          "quote": "6\n数字化活动的全员参与，完善评价和激励机制，将推进质量\n管理数字化转变为员工主动创新、有能力创新的现实行动。\n结合数字化转型的发展需要，对影响质量的相关岗位人员制\n定数字化技能提升计划，提高运用信息化系统以及在数字化\n条件下应用质量管理技术方法的能力。对有重要影响的岗位\n人员实施适当的考核评价，以确保相关人员具有在数字化条\n件下履行质量职责的能力。\n（十一",
+          "score": 0.6534855961799622,
+          "scope": "public"
+        },
+        {
+          "documentId": "doc-4b100188ad1539b0",
+          "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+          "documentVersion": "试行",
+          "pageNumber": 4,
+          "chunkId": "doc-4b100188ad1539b0:bddfaa57ec764cad:p4:c1",
+          "quote": "水平。面向医药、食品等行业，推进产品全生命周期质量追溯。联合上下游共建\n产品唯一标识规范，开展质量追溯体系建设，提供信息实时追溯和查询服务，强\n化全生命周期质量协同管控，让消费者放心消费。\n三、完善企业质量管理数字化工作机制\n（七）加强质量管理数字化组织领导。企业应结合两化\n融合的发展目标和规划部署，优化质量方针、质量目标，制",
+          "score": 0.6280457973480225,
+          "scope": "public"
+        },
+        {
+          "documentId": "doc-4b100188ad1539b0",
+          "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+          "documentVersion": "试行",
+          "pageNumber": 9,
+          "chunkId": "doc-4b100188ad1539b0:bddfaa57ec764cad:p9:c0",
+          "quote": "9\n的相关标准规范基础上，鼓励标准化组织、行业协会、社会\n团体、重点企业围绕质量管理数字化建立标准和规范，加强\n标准宣贯、应用服务和实施效果评估。面向产业集聚区，推\n动建立和完善面向质量管理数字化的标准研制、产业计量、\n检测认证等公共服务体系，培育提供咨询诊断、项目实施和\n运行维护等全流程质量管理数字化提升服务的专业机构。\n七、完善政策保障和支撑环境\n（二十",
+          "score": 0.6365332007408142,
+          "scope": "public"
+        }
+      ]
+    }
+  ]
+}

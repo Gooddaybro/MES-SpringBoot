@@ -1,8 +1,8 @@
 # AI助手接入与运行指南
 
-更新：2026-10-27（R003文档同步）。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文中的路径都相对于该 Git 仓库根目录，即包含 `mes/`、`scripts/` 和 `docs/` 的目录。R003 详细状态见 [模型适配与评测报告](R003模型适配与评测报告.md)。
+更新：2026-10-28（R004 Python LangGraph / PDF RAG）。适用仓库：`Gooddaybro/MES-SpringBoot` 的 `agent` 分支。本文路径相对于包含`agent/`、`mes/`、`scripts/`、`docs/`的真实仓库。当前操作以[第13节](#13-r004当前操作与状态)及[Python运行说明](../agent/README.md)为准；R003独立Java意图识别历史见[模型适配报告](R003模型适配与评测报告.md)。
 
-本次同步核对的业务代码提交：[`9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c`](https://github.com/Gooddaybro/MES-SpringBoot/commit/9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c)，R002 基线为 `781ed2d31e47bf50879e7ad07af40831683ba57b`。**当前是“模型辅助的受控意图识别 + Java 工具执行”**，没有完整的多步 Agent 工具循环。后续跨电脑工作以本指南的当前操作和第 9 节进入条件为准，历史日志不作为功能完成证明。
+R003代码基线为[`9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c`](https://github.com/Gooddaybro/MES-SpringBoot/commit/9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c)，R002为`781ed2d31e47bf50879e7ad07af40831683ba57b`。R004保留Java规则快路径，新增真实StateGraph与受控的数据库结果/文档检索两工具工作流。**当前有真实Jina向量检索，DeepSeek聊天Key按用户要求留空；回答为原文摘录，没有模型总结，也没有任意自主工具循环。** 实际版本见改造日志R004，历史状态不替代当前证据。
 
 ## 1. 现在交付了什么
 
@@ -13,15 +13,17 @@
 | 登录、查询权限、输入校验、依据与错误反馈 | 已实现 | 专用权限 `mes:assistant:routing:read`；不能通过前端切换角色获取权限 |
 | 原工厂业务数据库 | 待接入 | 本机已连接的是独立 `mes_study` 学习库，含原项目样例数据；没有获得真实工厂的连接配置 |
 | Java 8 模型意图适配器 | 已实现，真实服务实测待验证 | 规则优先，MES_LLM_* 配置后经 Chat Completions 补位；本机无真实凭据，仅替身故障测试 |
-| Python / 多步 Agent | 未实现 | 本轮是 Java 内受控意图识别与单次只读工具执行 |
+| Python / LangGraph受控工作流 | 初版已实施并本机验证 | 真正StateGraph，最多两工具；Java负责身份、业务权限和真实查询；没有自主无限循环 |
 | 伺服控制器教学主数据 | 已准备并在隔离库验证 | 6 物料、1 路线、6 工序、6 关联；见独立 [主数据说明](伺服控制器样例主数据.md) |
 | P2 BOM 齐套与报工 | 待接入 | BOM 头表为空、子项表缺失，库存/工单/报工尚无完整实现 |
 | P3 ChatBI | 待接入 | 无真实生产质检统计数据；不开放模型执行 SQL |
-| P4 RAG | 待接入 | 无文档库、Embedding、Milvus 或已导入的 FANUC 手册 |
+| P4 RAG | 本机初版已验证 | 24份已授权参考PDF登记，23份/1635块可检索；Jina+Chroma；45页扫描件未OCR；不代表工厂专用SOP |
 
 **业务目标是伺服电机控制器。** 现有库中的 `100112`（电工胶带）、`MAT-DEMO-001`（早期教学物料）及“车轴流程”等是已有样例，保留原记录用于验证查询链。它们不是伺服控制器的真实工艺，也不能写成已对接工厂数据。请在获得真实主数据后，通过原业务维护流程绑定实际物料与路线。
 
 ## 2. 架构与关键文件
+
+下图保留Java子链；R004完整签名请求链、实际Python类和图节点见第13节及Python README。
 
 ```mermaid
 flowchart TD
@@ -391,7 +393,7 @@ base URL 去尾斜线后追加 `/chat/completions`，已含后缀则不重复。
 
 本次仅核实本进程三项 MES_LLM_* 均未配置，仓库和交付记录无可核对的真实供应商请求/成功响应证据。没有搜索或复用其他应用的凭据。**配置存在、客户端测试通过、请求级 modelConnected=true，均不能单独证明真实模型全面验证。**
 
-Python 属于第9节阶段C的独立规划，本轮没有Python服务或多步Agent循环。本轮不向模型发送数据库结果；若将来允许编排访问结果，须重新审核数据范围与外发契约。回调Java必须有受限接口、短期凭据和工具白名单，不能把现有Cookie接口当作匿名工具。
+以上是R003独立Java意图识别链的边界。R004已新增Python知识服务：复合请求可向内部Python发送Java已校验的最小工艺结果，不转交Cookie或数据库凭据；Jina接收用于向量化的问题和已批准PDF文本。DeepSeek当前不调用，未来配置后仅发送问题及检索片段做证据选择，不发送本版Java结构化结果给外部聊天模型。没有匿名Java回调，具体签名契约见第13节。
 
 ## 9. 第八步：P2–P4继续开发
 
@@ -406,9 +408,9 @@ Python 属于第9节阶段C的独立规划，本轮没有Python服务或多步Ag
 | B3 工单状态机 | 计划中 | 用户先用自己的话完成一页规则，审阅后再编码；明确路线/数量/SN粒度 | 状态转换、工序顺序、不能越站条件及边界测试有独立验收 |
 | B4 报工预览与确认 | 计划中 | B3规则/状态检查及数量口径可靠；有独立权限与确认设计 | Java无写入预览→用户明确确认→事务/幂等写入；模型不能确认或直接写入 |
 | B5 受控统计 | 计划中 | 有授权且可信的事实来源、审核指标定义与数据范围 | 指标/维度/筛选白名单、SQL核对、权限/边界测试逐项通过 |
-| C / P4 Python Agent/RAG | 计划中 | ①R003稳定且Java权限/接口契约可靠；②取得本项目可用的真实SOP或质检手册PDF及明确授权 | 保留页码的检索、来源/版本/权限验证、受控跨服务调用；不依赖BOM/库存/工单全部完成 |
+| C / P4 Python Agent/RAG | R004本机初版已验证，聊天模型实调待验证 | Java契约已审查；用户批准24份制造参考PDF正式入库与公开范围引用 | 已有页码、来源、ACL、短期签名与真实检索；生产专用SOP仍需另行取得；不依赖B1–B5全部完成 |
 
-A 的“真实模型待验证”不能隐藏；具体供应商是否稳定需补实测。C 进入前须实际审阅 Java 契约及稳定性证据，不能仅凭提交数量宣布可靠。目前没有已授权PDF或真实RAG证据，故正式文档入库和检索工作尚不能开始。
+A的“真实聊天模型待验证”继续保留。R003文档同步时尚无授权PDF；此阻塞已在R004由用户明确批准24份真实制造参考PDF后解除，Java契约经审查并完成本机联调。Jina已实调，不能据此宣称DeepSeek或生产环境已经验证。
 
 ### 阶段 A：R003——Java 8 大模型适配器
 
@@ -460,18 +462,18 @@ A 的“真实模型待验证”不能隐藏；具体供应商是否稳定需补
 - 模型只能映射指标名与受限参数，不能选择任意表/列、拼接SQL、扩大数据范围或输出可执行脚本。每项设置行数/耗时限制并执行Java权限过滤。
 - 验收：与人工SQL结果一致，覆盖0分母、无数据、边界日期、错误参数、越权、超时和截断；显示范围、来源与计算口径。各指标分别记录目标/代码/测试/Commit/回滚，不把根因建议写成已证实事实。
 
-### P4：有来源RAG（待接入）
+### P4：有来源RAG（R004本机初版已落地）
 
 阶段 C 是**独立 Python Agent / RAG 子项目**；不再以P1–P3全部完成为前提，主要依赖授权文档和可靠Java契约。进入条件必须同时满足：
 
 1. R003已稳定，Java登录、权限和接口契约经验证可靠；具体跨服务身份/数据范围契约须先审阅，不把当前浏览器Cookie接口当匿名工具。
-2. 已取得可用于本项目的真实SOP或质检手册PDF，并有明确授权、版本、访问范围和数据处理边界。未取得授权文档时，**不开始正式入库、Embedding或检索**；原型中的FANUC片段/ChunkID不算授权资料或检索证据。
+2. 已取得真实制造文档并明确项目授权、版本、访问范围和处理边界。R004用户进一步批准现有24份制造参考PDF正式入库及公开范围引用；这不代表已有本工厂生产专用SOP。没有授权文档时，**不开始正式入库、Embedding或检索**；原型FANUC片段/ChunkID不能作为证据。
 
-职责和计划范围：Python独立服务负责PDF解析、保留页码/文档ID/版本的切块、Embedding、检索和LangGraph多工具编排；Java继续负责身份认证、业务权限、结构化查询和生产数据写入。当前无Python服务、索引或多工具循环，不把这一段写成已实施。
+R004实际范围：Python独立服务负责逐页解析、保留页码/文档ID/已确认版本的切块、Jina向量、Chroma检索和有限LangGraph编排；Java负责身份认证、业务权限、结构化查询。生产写入仍只允许未来独立建设的Java确认/事务接口，当前没有任何写入工具。真实DeepSeek、OCR、长期记忆和自主循环尚未验证或未实现。
 
-跨服务采用受控HTTP契约，携带 `requestId`、用户数据范围和服务器签发的短期签名上下文；Java校验签名/过期、请求用户、数据范围和工具白名单，防伪造/越权。当前Java已有请求追踪字段名是 `traceId`；未来契约须明确两者映射，不能声称已有 `requestId` 签名机制。Python不直接连接MES数据库，不转交管理员账号、长期Cookie或生产写入凭据；需要写入仍走Java独立确认/事务/幂等边界。
+跨服务已采用受控HTTP与HMAC：Java的`traceId`作为Python的`requestId`及nonce，服务器派生用户范围和工具白名单，Python校验正文签名、<=60秒有效期和防重放；Java继续校验MES登录与业务权限。没有把浏览器Cookie接口改成匿名工具。当前仅本机回环、单worker；远程TLS/分布式防重放属于待建设部署范围。
 
-验收顺序（计划中）：授权与版本清单→保留页码解析→可复现切块/索引→带来源的检索评测→无依据拒答→越权/伪造/过期上下文拒绝→LangGraph工具次数/超时边界。回答显示文档名、版本、页码/片段；删除/换版后验证索引一致性，不靠模型记忆冒充手册。所选Python依赖、向量库、具体文件布局与迁移另行设计，不预先宣称Milvus等已接入。
+R004已执行授权清单、逐页切块、真实入库/重复入库、ACL与签名故障测试、带来源检索评测及图边界验证；选用Chroma并锁定Python依赖。主集20条19通过，另1条跨页组合通过；未命中项、原始JSON和后续验收见专项报告。生产文档扩展及真实模型验收仍须逐项独立记录，不能靠模型记忆冒充手册。
 
 若用户希望提前练习LangGraph，可在仓库外单独建立教学Demo，使用模拟Java工具和明确标记的教学资料；它不影响主线、不计为正式RAG入库或真实制造业务验收。本次仅记录这一选项，没有创建Demo。
 
@@ -608,7 +610,7 @@ git ls-remote --heads origin agent
 
 本指南为当前接入说明；`LOCAL-RUN.md`保留早期环境记录，`MES_REFACTOR_JOURNAL.md`保留历史设计与本轮日志。发生阶段编号或历史示例冲突时，以本指南的实际实现和P2–P4定义为准。
 
-## 12. R003 最新验收
+## 12. R003 历史验收（2026-10-27）
 
 2026-10-27：原生 JDK 1.8.0_202 / Maven 3.6.3，完整 package 的 112 项 Java 测试通过（含 30 项 HTTP 替身）；显式真实学习库只读 IT 1 项、Node 11 项、启动路径与种子 SQL 探针通过。最终新 jar 在 9090 启动，浏览器验证码登录、SERVO-DEMO-CTRL-001 六工序和 MODEL_NOT_CONFIGURED 降级显示通过。
 
@@ -617,3 +619,73 @@ git ls-remote --heads origin agent
 证据对应代码提交 `9ae01c53fe8a3c1bd07bbdcb4cf4ccbd3d4ec80c`。原包构建日志结束于2026-10-27 11:22:56、显式IT结束于11:25:44；本机忽略目录 `.local/r003-final-package.log`、`r003-database-it.log` 与Surefire XML保留了112+1的结果，新电脑应按本指南自行复跑。这是历史验收，不表示本次仅改文档又执行了完整package、生产部署或真实模型验证。
 
 本次同步仅修改既有三份文档，重新执行30项客户端测试+2项评测测试与11项Node测试，均通过；11:42:11评测均值为原规则0.383370ms、R003模型禁用0.225513ms，决策计数与归档一致。只读复核学习库样例数量仍为6/1/6/6，sp_bom为空、sp_bom_item缺失；没有新增业务写入、迁移或Python/RAG代码。
+
+## 13. R004当前操作与状态
+
+实际实现版本：[`73cffb9bb5bd1456dde2991901038cb92fd5909d`](https://github.com/Gooddaybro/MES-SpringBoot/commit/73cffb9bb5bd1456dde2991901038cb92fd5909d)，已成功推送agent。当前文档同步的提交记录以本文件Git历史为准。
+
+### 13.1 当前链路和实际文件
+
+`浏览器抽屉→Java Shiro/权限/原文编码校验→普通查询直接MaterialRoutingService`；知识/复合查询改走`PythonAgentService→HMAC平面JSON→FastAPI→真实StateGraph→受控MES结果工具/Jina+Chroma检索→原文/页码校验→原抽屉纯文本展示`。复合查询的业务SQL仍由Java预执行，不给Python数据库连接或Cookie。
+
+| 实际路径 | 职责 |
+| --- | --- |
+| `agent/app/main.py`、`security.py`、`schemas.py` | health、签名聊天、严格Schema、64KiB正文、短期HMAC和有界防重放 |
+| `agent/app/graph.py` / KnowledgeWorkflow | 实际classify_intent、execute_mes_tool、retrieve_knowledge、generate_answer、validate_answer、handle_error及条件边；至多2工具/30秒 |
+| `agent/app/llm.py` / DeepSeekClient | 可选DeepSeek证据选择、JSON/原文校验与失败码；无Key不调用 |
+| `agent/app/rag/loader.py`、`splitter.py` | 核对批准文件SHA256、pypdf逐页、中文段落优先、不跨页800/120切块 |
+| `agent/app/rag/embeddings.py`、`cache.py` | Jina query/passage任务、向量校验、私有批次缓存；切分不依赖Embedding API |
+| `agent/app/rag/store.py`、`retriever.py`、`ranking.py` | 本机Chroma、有效哈希/ACL前置过滤、幂等更新删除、最多30候选的本地重排与前5引用 |
+| `agent/app/cli.py`、`inventory.py`、`evaluate.py` | 本机入库维护、真实元数据清单和真实检索评测；不开放匿名管理HTTP |
+| `assistant/agent/PythonAgentProperties.java`、`PythonAgentService.java` | 位于Java既有`com/wangziyang/mes`包下；配置、签名/最小Java结果、有界会话、错误与返回字段校验 |
+| `scripts/local/Start-Agent.ps1`、`Stop-Agent.ps1` | 独立venv与回环进程管理；私有配置`.local/agent.env` |
+| `scripts/sql/mes_assistant_knowledge_permission.sql` | 显式指定角色的知识读权限，restricted另行授权；不得给所有用户一键全开 |
+
+完整图与字段契约见[Python README](../agent/README.md)，版本锁在`agent/uv.lock`。新增原件不会自动被批准，清单在`agent/documents/manifest.json`；当前24份授权、23份/1635块，扫描45页未OCR。实际语料类型和页码见[清单](R004-PDF清单.md)，不能当作工厂专用SOP。
+
+### 13.2 跨电脑最短操作
+
+从真实仓库根目录开始：
+
+```powershell
+uv sync --frozen --project agent
+./scripts/local/Start-Agent.ps1
+# 编辑自动生成且被Git忽略的.local/agent.env：JINA_API_KEY填自己的Key。
+# 当前DEEPSEEK_API_KEY保持空；未来填写后重启Python才启用证据选择。
+./scripts/local/Stop-Agent.ps1
+# 放入已授权原件；默认在仓库上一级pdf文档，或配置AGENT_PDF_DIR。
+uv run --project agent python -m app.cli ingest
+./scripts/local/Start-Agent.ps1
+./scripts/local/Start-Local.ps1 -Rebuild
+```
+
+共享随机签名密钥由Start-Agent首次生成，两端读取同一文件；不能将它与Jina/DeepSeek Key混用。Java默认连接3秒、读取35秒，Python总30秒、Embedding20秒、聊天15秒；配置名、上下限及故障步骤见README配置表。自定义AGENT_DATA_DIR/AGENT_PDF_DIR时使用绝对路径，使CLI与后台进程读取同一目录。新电脑必须独立配置本机数据库和已批准角色；原件、口令、索引、venv不在Git中。
+
+知识权限SQL需在已确认的本地数据库会话显式设置`@assistant_knowledge_role_id`再SOURCE；只对指定有效角色授予public知识读权限，restricted使用独立变量。本机只对原学习角色执行，并验证重复运行无重复关联；不把它当生产角色方案。权限修改后重新登录。
+
+未来只需在私有文件填写`DEEPSEEK_API_KEY`并重启Python；默认DeepSeek地址/模型已按官方文档配置，尚未真实验证。Java R003的MES_LLM_*保持独立且默认禁用。不得因health显示configured或因为真实Jina成功，就把聊天服务写成已连接。
+
+### 13.3 结果语义和边界
+
+- 规则路线：保持R003规则字段，不请求Python；数据库结果与查询依据来自Java只读服务。
+- 无聊天Key的知识查询：`agentExecuted=true`仅表示LangGraph执行，RULE/false/false/null、EXTRACTIVE_NO_MODEL表示真实摘录；页面明确未生成模型总结。
+- 未来模型证据选择通过：GROUNDED_MODEL及本次modelConnected=true；这一请求标志仍不等于已完成真实供应商整体验收。
+- 模型失败：记录LLM_TIMEOUT/LLM_UNAVAILABLE/LLM_INVALID_RESPONSE/LLM_UNGROUNDED，保留EXTRACTIVE_FALLBACK；不把越出检索上下文的引用当答案。
+- 无结果、无索引、无文档范围、检索异常分别为NO_KNOWLEDGE、NO_INDEX、DOCUMENT_FORBIDDEN、RETRIEVAL_ERROR。引用精确不等于片段已完整回答问题。
+
+Python链路的四个旧字段针对规则整理/模型证据选择；原Java链路仍是意图识别语义，不能混成同一种“模型已联网”。本轮真实聊天调用为0。外部Embedding只处理已批准文本与问题；Python只消费当前授权范围，PDF内容不能改变权限、工具或系统指令。没有报工、写入、SQL生成工具。
+
+### 13.4 本轮验收与后续入口
+
+实际执行Python52、Java默认142+独立本机SQL IT1、前端14项，全部通过；最终jar构建/启动与真实浏览器复合查询已验证。主集20题19通过，物理页召回15/16=93.75%，错误工具0；独立跨页题1/1，模型调用均为0。保留纯向量基线、失败项和每题耗时，见[R004专项报告](R004-Agent与RAG评测报告.md)；这不是聊天回答准确率。
+
+```powershell
+uv run --project agent pytest agent/tests -q
+uv run --project agent python -m app.evaluate
+uv run --project agent python -m app.evaluate --dataset agent/evals/rag-multi-fragment.jsonl --output docs/evals/R004-rag-multi-fragment.json
+node --test scripts/tests/mes-assistant.test.cjs
+```
+
+Java测试使用第10节本地profile命令，当前默认计数142；显式IT仍须`-Dtest=MesAssistantDatabaseIT -Dmes.it.enabled=true`。故障模拟先停止Python，验证知识失败而纯路线可查，再启动恢复；API签名、权限、超时和供应商HTTP替身由自动化测试覆盖。
+
+R003真实聊天模型验收仍待Key；R004框架和本地检索已验证。B0现有教学数据本轮复核6/1/6/6，B1–B5仍按第9节各自进入条件独立建设；C不需要等待它们，但新增生产SOP必须另审授权/版本/范围。OCR、生产库、远程部署、长期记忆及自主工具循环尚未实现或未验证。停用`MES_AGENT_ENABLED`并重启Java、停止Python可回到原规则路径；不删除原件或业务表。
