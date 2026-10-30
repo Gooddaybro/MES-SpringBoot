@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: false
   mvc:
     view:
       prefix: /templates/
@@ -16,9 +18,9 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.52.76:3306/sparchetype?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Hongkong
-    username: admin
-    password: ${MES_DB_PASSWORD:}
+    url: ${MES_PRO_DB_URL}
+    username: ${MES_PRO_DB_USERNAME}
+    password: ${MES_PRO_DB_PASSWORD}
     druid:
       initial-size: 8
       min-idle: 5

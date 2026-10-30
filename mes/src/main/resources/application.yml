@@ -1,6 +1,16 @@
 server:
   session-timeout: 1800
 spring:
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    clean-disabled: true
+    out-of-order: false
+    encoding: UTF-8
+  datasource:
+    initialization-mode: never
   profiles:
     active: dev
   cache:

@@ -51,6 +51,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Spring Boot 2.1.7 manages Flyway 5.2.4 and Connector/J 8.0.17 (Java 8). -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
         <!--解决默认的情况下，在mybatis里面不支持java8的时间、日期-->
         <dependency>
             <groupId>org.mybatis</groupId>
