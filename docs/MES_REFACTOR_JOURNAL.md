@@ -395,6 +395,18 @@ flowchart TD
 - 实际代码提交：[`73cffb9bb5bd1456dde2991901038cb92fd5909d`](https://github.com/Gooddaybro/MES-SpringBoot/commit/73cffb9bb5bd1456dde2991901038cb92fd5909d)，`feat: 新增受控LangGraph与Jina PDF检索框架`，50文件；已成功推送origin/agent。M1–M6属于同一实际实现提交，本日志按阶段分别记录，未捏造独立SHA。文档同步为随后单独提交，其自身SHA仅在成功后由Git历史/交付回复核对。
 - 代码回滚可先关闭MES_AGENT_ENABLED并重启Java/停Python；需要Git撤销时先审阅`git revert 73cffb9bb5bd1456dde2991901038cb92fd5909d`对后续文档和本机配置的影响，本次未执行。它不会删除外置PDF、派生索引或数据库权限；权限撤销按M5指定角色独立处理。
 
+### 2026-10-30 · 数据库版本管理 · Flyway 集成
+
+- 状态：**已实施、已验证（JDK8 / MySQL8.0.46 / 本机3308临时库）**。当前 agent 分支；按用户补充要求分组本地 `feat：中文` 提交，不推送。既有 R004/R005 Java、Python、前端及相关未提交文档保留，不混入本次提交；dev 文件沿用已有本机配置并修正静态资源映射。
+- SQL审查：完整检查 scripts/sql 的13份文件。0330提取17表及必要系统配置为V1；0326和五份单表含DROP，仅历史保留；V2补齐缺失BOM明细及materiel_code（保留materiel_id，不回填）；V3去重登记7项助手能力但不自动授权；V4工单结构独立，不带演示数据。全部原始SQL保留原文。三份原本未跟踪的R005 SQL是维护命令和迁移测试直接依赖，一并纳入工具提交。
+- 新增/修改：mes/pom.xml、application.yml/dev/pro、db/migration/V1–V4；独立LocalFlywayBaseline维护入口及3个数据库测试类；scripts/db的独立建库SQL、只读结构契约及维护工具；启动器停止导入旧快照；新增Python安全测试及真实jar启动smoke。指南含逐文件分类、IDEA新机启动、旧库接管、后续版本规范及MySQL失败恢复。
+- 安全边界：dev固定127.0.0.1:3306/mes_study、密码无默认值；pro默认禁用迁移且远程连接信息全部从专用环境变量读取。baseline-on-migrate始终false，clean禁用。旧库核验字段/表默认collation、索引/CHECK/外键/系统元数据/权限冲突，通过备份及显式确认后仅baseline1；独立Java API固定本机目标，不接受Flyway/Maven/Java环境覆盖。不自动repair、不清库，不写原学习库。
+- 实际测试：完整JDK8 package **182通过，0失败/错误/跳过**；最终FlywayDatabaseIT6+LocalFlywayBaselineTest2独立复跑8通过；真实Realm/用户/菜单/6权限及受限拒绝、物料/6工序路线/工单查询IT1通过；Python安全6、Node20、PowerShell启动探针2通过。完整smoke9项通过，包含真实jar空库初始化、两次启动逐表哈希一致、新V99只执行一次、V100故意失败阻止启动且DDL残留可见、失败再启动拒绝、手工全量+部分R005备份后接管及逐行保留、大小写/重音冲突拒绝和外部配置指向隔离trap库时仍只在核验目标baseline1。登录页JS/CSS真实HTTP200。
+- 审查与修复：独立只读审查发现并关闭4项：dev静态资源路径404、表默认collation漏检、权限大小写/重音比较不一致、Maven Flyway入口继承外部配置可能连错库。Java维护日志显式UTF-8，避免Windows JDK8默认编码影响错误证据采集。没有保留已失败方案为可执行入口。
+- 证据：[脱敏结果](evals/Flyway-20261030.json)、[运行指南](Flyway数据库初始化与版本管理指南.md)。本机私有日志/备份在忽略的.local/flyway-smoke-9ea92ec9296f4964a034bcaafde2d1c3/，不提交密码、Cookie或业务行。真实3308/mes_study前后18张表行哈希及数量完全一致，没有新增history。
+- 未验证/风险：3306凭据与库内容未验收；原3308旧库只读，尚未正式baseline/迁移。浏览器验证码提交及IDEA按钮未自动操作；Redis、真实Agent/模型、BOM业务/旧字段映射、生产和多物理电脑部署未验收。完整R005服务smoke依赖工作区原有R005代码，该部分仍待其自身另行提交。MySQL DDL不能保证整体回滚，失败须停写、备份、逐对象检查后选择恢复或审阅过的修复，禁止盲目repair。
+- 回退：停用dev的Flyway或切回原local配置可以停止自动升级；Git回退不撤销已执行DDL、history、账号或样例数据。保留数据库备份，任何表/列/业务数据回退另行审阅。提交SHA以实际git log为准，不预填自身SHA。
+
 ### 后续日志模板（每次复制一段并填充）
 
 #### YYYY-MM-DD · R00N · 变更主题

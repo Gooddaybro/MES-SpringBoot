@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-30",
+  "timezone": "Asia/Shanghai",
+  "branch": "agent",
+  "status": "PASS",
+  "versions": {
+    "java": "1.8.0_202",
+    "spring_boot": "2.1.7.RELEASE",
+    "flyway": "5.2.4",
+    "mysql_connector_java": "8.0.17",
+    "mysql": "8.0.46"
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 3308,
+    "write_targets": "random mes_flyway_it_<32 hex UUID> databases only",
+    "expected_application_tables": 19,
+    "expected_total_tables_including_history": 20,
+    "existing_mes_study": "read-only; 18 table row hashes/counts unchanged; no history created"
+  },
+  "checks": [
+    {
+      "name": "JDK8 full package",
+      "status": "PASS",
+      "tests": 182,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "FlywayDatabaseIT",
+      "status": "PASS",
+      "tests": 6,
+      "coverage": [
+        "empty database",
+        "repeat unchanged",
+        "new version once",
+        "manual snapshot + partial R005 baseline preserves rows",
+        "failed DDL persists and retry refused",
+        "checksum mismatch"
+      ]
+    },
+    {
+      "name": "LocalFlywayBaselineTest",
+      "status": "PASS",
+      "tests": 2,
+      "coverage": "reject non-loopback, wrong port/database/JDBC options before any connection"
+    },
+    {
+      "name": "FlywayBusinessDatabaseIT",
+      "status": "PASS",
+      "tests": 1,
+      "coverage": [
+        "real Realm login",
+        "users and menu tree",
+        "six assistant permissions",
+        "restricted permission denied",
+        "material and six-operation route",
+        "R005 work-order service query"
+      ]
+    },
+    {
+      "name": "Python safety unit tests",
+      "status": "PASS",
+      "tests": 6
+    },
+    {
+      "name": "existing Node frontend tests",
+      "status": "PASS",
+      "tests": 20
+    },
+    {
+      "name": "existing PowerShell startup argument/settings probes",
+      "status": "PASS",
+      "tests": 2
+    },
+    {
+      "name": "real jar startup smoke",
+      "status": "PASS",
+      "checks": [
+        "JDK8 full Maven package including the existing context test",
+        "Empty database: real Spring Boot startup applied V1-V4; login JS/CSS available; no sample users/business data",
+        "Second real Spring Boot startup: history and every table row unchanged",
+        "First-user bootstrap refuses overwrite; explicit grants and repeated teaching seed preserve rows",
+        "Real Shiro login, users/menus, six capabilities, restricted denial, material/route/work-order services",
+        "New filesystem V99 executes exactly once across real restarts",
+        "Failed migration blocks Spring Boot; partial DDL/failed history persist; retry is refused",
+        "Case/accent and noncanonical permission conflicts refused; ambient Flyway/Maven/Java overrides cannot change baseline target/version",
+        "Backup + audited baseline CLI: rejects wrong schema; partial R005 takeover preserves every original row"
+      ],
+      "successful_starts": 5,
+      "expected_failed_starts": 2
+    },
+    {
+      "name": "original SQL files",
+      "status": "PASS",
+      "files_reviewed": 13,
+      "overwritten_or_deleted": 0
+    },
+    {
+      "name": "independent code review",
+      "status": "PASS",
+      "fixed_findings": [
+        "dev static resource mapping",
+        "table default collation verification",
+        "case/accent/canonical permission collision checks",
+        "baseline ambient Flyway/Maven/Java configuration bypass"
+      ]
+    }
+  ],
+  "private_evidence_directory": ".local/flyway-smoke-9ea92ec9296f4964a034bcaafde2d1c3",
+  "commands": [
+    "python -m unittest discover -s scripts/tests -p test_mes_db.py",
+    "python scripts/tests/flyway_smoke.py --mysql <local-mysql.exe> --client-config <ignored-private-client.ini> --java <jdk8-java.exe> --port 3308",
+    "mvn -f mes/pom.xml -Dmes.flyway.it=true -Dtest=FlywayDatabaseIT,LocalFlywayBaselineTest test"
+  ],
+  "deliberate_failures": "TDD red tests and disposable V100 SQL failure are expected evidence; no automatic repair/clean was executed",
+  "not_verified_or_not_performed": [
+    "3306 credentials and actual 3306 database contents",
+    "actual mes_study baseline/migration (left read-only)",
+    "browser CAPTCHA submission and clicking IDEA Run",
+    "Redis connectivity (Shiro tested with existing Ehcache configuration)",
+    "live Python Agent/RAG/model calls",
+    "BOM business workflow and legacy materiel_id backfill",
+    "production and multiple physical Windows machines"
+  ],
+  "commit_scope": "Flyway changes and its direct original R005 SQL dependencies only; prior uncommitted R005 Java/Python/frontend work is preserved outside these commits",
+  "push_performed": false,
+  "credentials_or_business_rows_in_report": false
+}
