@@ -1,7 +1,8 @@
 param(
     [string]$JdkHome = 'D:\Program Files\Java\jdk1.8.0_202',
     [string]$MySqlHome = 'D:\Program Files\mysql-8.0.46-winx64',
-    [switch]$Rebuild
+    [switch]$Rebuild,
+    [switch]$EnableFlyway
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -128,8 +129,7 @@ $appClient = Join-Path $runtime 'mysql-client.ini'
 Write-Utf8 $rootClient "[client]`nuser=root`npassword=$($secrets.rootPassword)`nhost=127.0.0.1`nport=3308`nprotocol=tcp`ndefault-character-set=utf8mb4`n"
 Write-Utf8 $appClient "[client]`nuser=mes_study`npassword=$($secrets.appPassword)`nhost=127.0.0.1`nport=3308`nprotocol=tcp`ndefault-character-set=utf8mb4`n"
 if (-not (Test-Path -LiteralPath (Join-Path $runtime 'database-ready'))) {
-    Write-Host 'Importing the original schema into the new mes_study database...'
-    $dumpPath = (Join-Path $repo 'scripts\sql\MySQL-sparchetype_20200330.sql').Replace('\', '/')
+    Write-Host 'Creating the local database only; Flyway initializes tables when explicitly enabled.'
     $bootstrap = Join-Path $runtime 'bootstrap.sql'
     Write-Utf8 $bootstrap @"
 ALTER USER 'root'@'localhost' IDENTIFIED BY '$($secrets.rootPassword)';
@@ -137,11 +137,10 @@ CREATE DATABASE IF NOT EXISTS mes_study CHARACTER SET utf8mb4 COLLATE utf8mb4_09
 CREATE USER IF NOT EXISTS 'mes_study'@'127.0.0.1' IDENTIFIED BY '$($secrets.appPassword)';
 GRANT ALL PRIVILEGES ON mes_study.* TO 'mes_study'@'127.0.0.1';
 USE mes_study;
-SOURCE $dumpPath;
 "@
     & $mysql --no-defaults -h 127.0.0.1 -P 3308 -u root --default-character-set=utf8mb4 --execute "source $($bootstrap.Replace('\','/'))"
-    if ($LASTEXITCODE -ne 0) { throw 'Database import failed; inspect bootstrap.sql before retrying.' }
-    Write-Utf8 (Join-Path $runtime 'database-ready') 'Original March 30 schema imported.'
+    if ($LASTEXITCODE -ne 0) { throw 'Database creation failed; inspect bootstrap.sql before retrying.' }
+    Write-Utf8 (Join-Path $runtime 'database-ready') 'Database created; table initialization is managed by Flyway.'
 }
 
 $redisDir = Join-Path $runtime 'redis'
@@ -180,6 +179,7 @@ if (-not (Assert-OwnedPort 9090 $jar)) {
         '-Dfile.encoding=UTF-8', '-Xms128m', '-Xmx384m',
         '-jar', "`"$jar`"",
         '--spring.profiles.active=local',
+        "--spring.flyway.enabled=$(([bool]$EnableFlyway).ToString().ToLowerInvariant())",
         "`"--spring.config.additional-location=file:$($appConfig.Replace('\','/'))`"",
         "`"--logging.config=file:$($logConfig.Replace('\','/'))`""
     )
@@ -188,4 +188,4 @@ if (-not (Assert-OwnedPort 9090 $jar)) {
 }
 Wait-LocalPort 9090
 Write-Host 'Ready: http://127.0.0.1:9090/login-ui'
-Write-Host 'Study login: admin / 123 (original sample account, localhost only)'
+Write-Host 'New database: enable Flyway, then use scripts/db/mes_db.py init-admin with your own password.'

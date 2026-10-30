@@ -1,0 +1,2344 @@
+{
+  "generated_from": "V1-V4 on MySQL 8.0.46; structural metadata only; no application rows or credentials",
+  "baseline_tables": [
+    "sp_bom",
+    "sp_factroy",
+    "sp_flow",
+    "sp_flow_oper_relation",
+    "sp_line",
+    "sp_materile",
+    "sp_oper",
+    "sp_sys_department",
+    "sp_sys_dict",
+    "sp_sys_menu",
+    "sp_sys_role",
+    "sp_sys_role_menu",
+    "sp_sys_user",
+    "sp_sys_user_role",
+    "sp_table_manager",
+    "sp_table_manager_item",
+    "sp_work_shop"
+  ],
+  "tables": {
+    "mes_work_order": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_unicode_ci",
+      "columns": {
+        "id": [
+          "char(36)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "order_code": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_bin",
+          ""
+        ],
+        "material_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "material_code": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_bin",
+          ""
+        ],
+        "material_name": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "unit": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "planned_quantity": [
+          "decimal(18,3)",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "state": [
+          "varchar(20)",
+          "NO",
+          "CREATED",
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "route_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "route_code": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "route_snapshot_json": [
+          "longtext",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "version": [
+          "bigint",
+          "NO",
+          "0",
+          null,
+          ""
+        ],
+        "created_at": [
+          "datetime(3)",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "updated_at": [
+          "datetime(3)",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "started_at": [
+          "datetime(3)",
+          "YES",
+          null,
+          null,
+          ""
+        ],
+        "completed_at": [
+          "datetime(3)",
+          "YES",
+          null,
+          null,
+          ""
+        ],
+        "created_by": [
+          "varchar(128)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ],
+        "updated_by": [
+          "varchar(128)",
+          "NO",
+          null,
+          "utf8mb4_unicode_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "ix_mes_work_order_material",
+          "1",
+          "1",
+          "material_code",
+          null,
+          "BTREE"
+        ],
+        [
+          "ix_mes_work_order_material",
+          "1",
+          "2",
+          "created_at",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ],
+        [
+          "uk_mes_work_order_code",
+          "0",
+          "1",
+          "order_code",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {
+        "ck_mes_work_order_quantity": "(`planned_quantity` > 0)",
+        "ck_mes_work_order_state": "(`state` in (_utf8mb4\\'CREATED\\',_utf8mb4\\'IN_PROGRESS\\',_utf8mb4\\'COMPLETED\\',_utf8mb4\\'CANCELLED\\'))",
+        "ck_mes_work_order_snapshot": "json_valid(`route_snapshot_json`)"
+      },
+      "foreign_keys": []
+    },
+    "sp_bom": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "bom_code": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_id": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "remark": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "version_number": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "state": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "factory": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "varchar(2)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_code": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_bom_item": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "bom_head_id": [
+          "varchar(64)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_item_code": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_item_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "line_no": [
+          "varchar(64)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "item_num": [
+          "decimal(18,3)",
+          "YES",
+          null,
+          null,
+          ""
+        ],
+        "item_unit": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "oper_typer": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "ix_sp_bom_item_head",
+          "1",
+          "1",
+          "bom_head_id",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_factroy": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "factory": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "factory_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_flow": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow_desc": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "process": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_flow_oper_relation": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow_id": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "per_oper_id": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "per_oper": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "oper_id": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "oper": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "next_oper_id": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "next_oper": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sort_num": [
+          "int",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "oper_type": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "flow_id_index",
+          "1",
+          "1",
+          "flow_id",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_line": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "line": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "line_desc": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "process_section": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_materile": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "materiel_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "unit": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "product_group": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "mat_type": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "model": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "size": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow_id": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "flow_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "char(2)",
+          "YES",
+          "0",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_oper": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "oper": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "oper_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_department": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "parent_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "name": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sort_num": [
+          "int",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "is_deleted": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_dict": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "name": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "value": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "type": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "descr": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sort_num": [
+          "int",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "parent_id": [
+          "varchar(64)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "char(2)",
+          "YES",
+          "0",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "idx_sp_sys_dict_name",
+          "1",
+          "1",
+          "name",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_menu": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "code": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "name": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "url": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "parent_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "grade": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sort_num": [
+          "int",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "type": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "permission": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "icon": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "descr": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "idx_sp_sys_menu_code",
+          "0",
+          "1",
+          "code",
+          null,
+          "BTREE"
+        ],
+        [
+          "idx_sp_sys_menu_name",
+          "0",
+          "1",
+          "name",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_role": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "name": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "code": [
+          "varchar(32)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "descr": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "varchar(2)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "idx_sp_sys_role_code",
+          "0",
+          "1",
+          "code",
+          null,
+          "BTREE"
+        ],
+        [
+          "idx_sp_sys_role_name",
+          "0",
+          "1",
+          "name",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_role_menu": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "role_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "menu_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_user": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "name": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "username": [
+          "varchar(128)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "password": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "dept_id": [
+          "varchar(64)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "email": [
+          "varchar(64)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "mobile": [
+          "varchar(32)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "tel": [
+          "varchar(32)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sex": [
+          "char(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "birthday": [
+          "datetime",
+          "YES",
+          null,
+          null,
+          ""
+        ],
+        "pic_id": [
+          "varchar(64)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "id_card": [
+          "varchar(32)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "hobby": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "province": [
+          "varchar(128)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "city": [
+          "varchar(128)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "district": [
+          "varchar(128)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "street": [
+          "varchar(128)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "street_number": [
+          "varchar(64)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "descr": [
+          "varchar(255)",
+          "YES",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "idx_sp_sys_user_email",
+          "1",
+          "1",
+          "email",
+          null,
+          "BTREE"
+        ],
+        [
+          "idx_sp_sys_user_id_card",
+          "1",
+          "1",
+          "id_card",
+          null,
+          "BTREE"
+        ],
+        [
+          "idx_sp_sys_user_mobile",
+          "0",
+          "1",
+          "mobile",
+          null,
+          "BTREE"
+        ],
+        [
+          "idx_sp_sys_user_username",
+          "0",
+          "1",
+          "username",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_sys_user_role": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "user_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "role_id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_table_manager": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "table_name": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "table_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "is_deleted": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "permission": [
+          "varchar(255)",
+          "NO",
+          "\"\"",
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "index1",
+          "0",
+          "1",
+          "table_name",
+          null,
+          "BTREE"
+        ],
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_table_manager_item": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "table_name_id": [
+          "varchar(255)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "field": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "field_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "must_fill": [
+          "varchar(1)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "sort_num": [
+          "int",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    },
+    "sp_work_shop": {
+      "engine": "InnoDB",
+      "collation": "utf8mb4_0900_ai_ci",
+      "columns": {
+        "id": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "work_shop": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "work_shop_desc": [
+          "varchar(255)",
+          "YES",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "create_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "create_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ],
+        "update_time": [
+          "datetime",
+          "NO",
+          null,
+          null,
+          ""
+        ],
+        "update_username": [
+          "varchar(64)",
+          "NO",
+          null,
+          "utf8mb4_0900_ai_ci",
+          ""
+        ]
+      },
+      "indexes": [
+        [
+          "PRIMARY",
+          "0",
+          "1",
+          "id",
+          null,
+          "BTREE"
+        ]
+      ],
+      "checks": {},
+      "foreign_keys": []
+    }
+  },
+  "system_data": {
+    "sp_sys_dict": {
+      "columns": [
+        "type",
+        "value"
+      ],
+      "required": [
+        [
+          "material_type",
+          "FG"
+        ],
+        [
+          "material_type",
+          "material"
+        ],
+        [
+          "material_type",
+          "PG"
+        ],
+        [
+          "ORDER_UNIT",
+          "BOX"
+        ],
+        [
+          "ORDER_UNIT",
+          "PCS"
+        ]
+      ]
+    },
+    "sp_sys_menu": {
+      "columns": [
+        "id",
+        "parent_id",
+        "grade",
+        "type",
+        "url"
+      ],
+      "required": [
+        [
+          "1",
+          "0",
+          "1",
+          "0",
+          "#"
+        ],
+        [
+          "10",
+          "1",
+          "2",
+          "0",
+          "#"
+        ],
+        [
+          "101",
+          "10",
+          "3",
+          "0",
+          "/admin/sys/menu/list-ui"
+        ],
+        [
+          "102",
+          "10",
+          "3",
+          "0",
+          "/admin/sys/user/list-ui"
+        ],
+        [
+          "103",
+          "10",
+          "3",
+          "0",
+          "/admin/sys/role/list-ui"
+        ],
+        [
+          "104",
+          "10",
+          "3",
+          "0",
+          "/admin/sys/department/list-ui"
+        ],
+        [
+          "105",
+          "10",
+          "3",
+          "0",
+          "/basedata/manager/list-ui"
+        ],
+        [
+          "106",
+          "10",
+          "3",
+          "0",
+          "/basedata/manager/item/list-ui"
+        ],
+        [
+          "12",
+          "1",
+          "2",
+          "0",
+          "#"
+        ],
+        [
+          "121",
+          "12",
+          "3",
+          "0",
+          ":;"
+        ],
+        [
+          "13",
+          "1",
+          "2",
+          "0",
+          "#"
+        ],
+        [
+          "131",
+          "13",
+          "3",
+          "0",
+          "/basedata/materile/list-ui"
+        ],
+        [
+          "14",
+          "1",
+          "2",
+          "0",
+          "#"
+        ],
+        [
+          "141",
+          "14",
+          "3",
+          "0",
+          "/digitization/plan/plan-ui"
+        ],
+        [
+          "15",
+          "1",
+          "2",
+          "0",
+          "#"
+        ],
+        [
+          "151",
+          "15",
+          "3",
+          "0",
+          "/basedata/flow/process/list-ui"
+        ],
+        [
+          "152",
+          "15",
+          "3",
+          "0",
+          ":;"
+        ],
+        [
+          "2",
+          "0",
+          "1",
+          "0",
+          "#"
+        ],
+        [
+          "3",
+          "0",
+          "1",
+          "0",
+          "#"
+        ]
+      ]
+    },
+    "sp_table_manager": {
+      "columns": [
+        "id",
+        "table_name"
+      ],
+      "required": [
+        [
+          "1237284254149844993",
+          "sp_factroy"
+        ],
+        [
+          "1238646992247808001",
+          "sp_oper"
+        ],
+        [
+          "1238649867422228482",
+          "sp_line"
+        ],
+        [
+          "1238653752496971777",
+          "sp_flow"
+        ],
+        [
+          "1238668511262871554",
+          "sp_work_shop"
+        ],
+        [
+          "1240147444588183554",
+          "sp_sys_dict"
+        ]
+      ]
+    },
+    "sp_table_manager_item": {
+      "columns": [
+        "table_name_id",
+        "field",
+        "must_fill",
+        "sort_num"
+      ],
+      "required": [
+        [
+          "1237284254149844993",
+          "factory",
+          "Y",
+          "1"
+        ],
+        [
+          "1237284254149844993",
+          "factory_desc",
+          "Y",
+          "2"
+        ],
+        [
+          "1238646992247808001",
+          "oper",
+          "Y",
+          "1"
+        ],
+        [
+          "1238646992247808001",
+          "oper_desc",
+          "Y",
+          "2"
+        ],
+        [
+          "1238649867422228482",
+          "line",
+          "Y",
+          "1"
+        ],
+        [
+          "1238649867422228482",
+          "line_desc",
+          "Y",
+          "2"
+        ],
+        [
+          "1238649867422228482",
+          "process_section",
+          "Y",
+          "3"
+        ],
+        [
+          "1238653752496971777",
+          "flow",
+          "Y",
+          "1"
+        ],
+        [
+          "1238653752496971777",
+          "flow_desc",
+          "Y",
+          "2"
+        ],
+        [
+          "1238668511262871554",
+          "work_shop",
+          "Y",
+          "1"
+        ],
+        [
+          "1238668511262871554",
+          "work_shop_desc",
+          "Y",
+          "2"
+        ],
+        [
+          "1240147444588183554",
+          "descr",
+          "Y",
+          "4"
+        ],
+        [
+          "1240147444588183554",
+          "name",
+          "Y",
+          "1"
+        ],
+        [
+          "1240147444588183554",
+          "sort_num",
+          "Y",
+          "5"
+        ],
+        [
+          "1240147444588183554",
+          "type",
+          "Y",
+          "3"
+        ],
+        [
+          "1240147444588183554",
+          "value",
+          "Y",
+          "2"
+        ]
+      ]
+    }
+  },
+  "capabilities": [
+    {
+      "id": "mes-assistant-knowledge-read",
+      "code": "mesAssistantKnowledgeRead",
+      "name": "助手公开知识查询",
+      "type": "2",
+      "permission": "mes:assistant:knowledge:read"
+    },
+    {
+      "id": "mes-assistant-knowledge-restricted",
+      "code": "mesAssistantKnowledgeRestricted",
+      "name": "助手受限知识查询",
+      "type": "2",
+      "permission": "mes:assistant:knowledge:restricted"
+    },
+    {
+      "id": "mes-assistant-material-read",
+      "code": "mesMaterialRead",
+      "name": "物料查询",
+      "type": "2",
+      "permission": "mes:assistant:material:read"
+    },
+    {
+      "id": "mes-assistant-operation-read",
+      "code": "mesOperationRead",
+      "name": "工序查询",
+      "type": "2",
+      "permission": "mes:assistant:operation:read"
+    },
+    {
+      "id": "mes-assistant-routing-read",
+      "code": "mesAssistantRoutingRead",
+      "name": "助手工艺路线查询",
+      "type": "2",
+      "permission": "mes:assistant:routing:read"
+    },
+    {
+      "id": "mes-assistant-workorder-read",
+      "code": "mesWorkOrderRead",
+      "name": "工单查询",
+      "type": "2",
+      "permission": "mes:assistant:workorder:read"
+    },
+    {
+      "id": "mes-assistant-workorder-write",
+      "code": "mesWorkOrderWrite",
+      "name": "工单创建和状态操作",
+      "type": "2",
+      "permission": "mes:assistant:workorder:write"
+    }
+  ]
+}
