@@ -1,15 +1,19 @@
-<div id="mes-ai-widget" class="mes-ai-widget" data-api="${request.contextPath}/admin/assistant/chat">
+<div id="mes-ai-widget" class="mes-ai-widget" data-api="${request.contextPath}/admin/assistant/chat" data-multi-api="${request.contextPath}/admin/assistant/multi/chat">
     <button id="mes-ai-launcher" class="mes-ai-launcher" type="button" aria-controls="mes-ai-panel" aria-expanded="false">
         <i class="fa fa-comments-o" aria-hidden="true"></i> MES 智能助手
     </button>
     <section id="mes-ai-panel" class="mes-ai-panel" aria-labelledby="mes-ai-title" hidden>
         <header class="mes-ai-header">
-            <div><strong id="mes-ai-title">MES 智能助手</strong><p>工艺查询 · PDF资料与页码引用</p></div>
+            <div><strong id="mes-ai-title">MES 智能助手</strong><p>单 Agent / 四业务多 Agent</p></div>
             <div class="mes-ai-actions">
                 <button id="mes-ai-clear" type="button">清空</button>
                 <button id="mes-ai-close" type="button" aria-label="关闭助手">关闭</button>
             </div>
         </header>
+        <div class="mes-ai-mode"><label for="mes-ai-mode">查询模式</label>
+            <select id="mes-ai-mode"><option value="single">单 Agent · 工艺与知识</option><option value="multi">多 Agent · 物料 / 工序 / 路线 / 工单</option></select>
+            <a href="${request.contextPath}/admin/manufacturing" target="_blank" rel="noopener">业务工作台</a>
+        </div>
         <div id="mes-ai-messages" class="mes-ai-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div class="mes-ai-shortcuts">
             <button type="button" data-question="我能做什么？">当前能力</button>
@@ -17,6 +21,11 @@
             <button type="button" data-question="质量管理数字化文档把什么作为推进发展的主线？">检索质量文档</button>
         </div>
         <form id="mes-ai-form" class="mes-ai-form">
+            <details id="mes-ai-context" class="mes-ai-context" hidden><summary>补充查询条件（可选）</summary>
+                <label for="mes-ai-material-code">物料编码</label><input id="mes-ai-material-code" maxlength="255" autocomplete="off">
+                <label for="mes-ai-operation-code">工序编码</label><input id="mes-ai-operation-code" maxlength="255" autocomplete="off">
+                <label for="mes-ai-work-order-code">工单编号</label><input id="mes-ai-work-order-code" maxlength="64" autocomplete="off">
+            </details>
             <label for="mes-ai-input">物料编码或问题</label>
             <div class="mes-ai-composer">
                 <textarea id="mes-ai-input" name="message" rows="3" maxlength="1000"

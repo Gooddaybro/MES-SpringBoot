@@ -1,5 +1,7 @@
 # 黑科MES 本人重起了一套springboot 开源框架 代码标准规范化。
 
+本地二次开发（2026-10-29）：已保留单Agent工艺/PDF助手，新增物料、工序、工艺路线、工单四业务多Agent和持久化工单工作台。入口为本机9090首页的助手模式选择及`/admin/manufacturing`。运行、数据初始化、调用关系及验证见[四业务多Agent说明](docs/R005-多Agent与四业务验收.md)。下方为原项目介绍和历史功能规划。
+
 ## 界面展示
 * 演示地址 
 * http://wangziyangmes.pzzd.xyz  

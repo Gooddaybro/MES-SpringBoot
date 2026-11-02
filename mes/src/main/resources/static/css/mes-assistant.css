@@ -17,6 +17,14 @@
 .mes-ai-widget .mes-ai-message-body { white-space: pre-wrap; }
 .mes-ai-widget .mes-ai-label { font-size: 12px; color: #486066; margin-bottom: 6px; }
 .mes-ai-widget .mes-ai-material { margin-top: 10px; padding: 9px; background: #f0f7f6; border-radius: 5px; white-space: pre-wrap; }
+.mes-ai-widget .mes-ai-mode { padding: 10px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #dce5e7; }
+.mes-ai-widget .mes-ai-mode select { max-width: 100%; padding: 5px; font: inherit; }
+.mes-ai-widget .mes-ai-mode a { color: #006c62; }
+.mes-ai-widget .mes-ai-context { margin-bottom: 8px; font-size: 13px; }
+.mes-ai-widget .mes-ai-context[hidden] { display: none; }
+.mes-ai-widget .mes-ai-context input { width: 100%; margin-bottom: 5px; padding: 5px; border: 1px solid #b9cdcc; border-radius: 4px; }
+.mes-ai-widget .mes-ai-agent-card { margin-top: 8px; padding: 9px; border: 1px solid #c8ded9; border-radius: 5px; background: #f8fbfa; white-space: pre-wrap; }
+.mes-ai-widget .mes-ai-handoffs { white-space: pre-wrap; color: #435f66; font-size: 12px; }
 .mes-ai-widget .mes-ai-table-wrap { overflow-x: auto; margin: 10px 0; }
 .mes-ai-widget .mes-ai-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .mes-ai-widget .mes-ai-table th, .mes-ai-widget .mes-ai-table td { padding: 7px; border: 1px solid #dce5e7; text-align: left; white-space: normal; }

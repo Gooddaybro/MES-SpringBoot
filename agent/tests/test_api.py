@@ -1,8 +1,9 @@
-from app.config import Settings
-from app.main import create_app
 from fastapi.testclient import TestClient
 from test_graph import Retriever
 from test_security import SECRET, signed_request
+
+from app.config import Settings
+from app.main import create_app
 
 
 def app():

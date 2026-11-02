@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-29",
+  "timezone": "Asia/Shanghai",
+  "environment": "local mes_study on3308; Java9090; Python8001",
+  "kind": "real-service-and-browser-smoke",
+  "scope": [
+    "material",
+    "operation",
+    "routing",
+    "workorder"
+  ],
+  "singlePreserved": {
+    "stepCount": 6,
+    "modelAttempted": false,
+    "status": "SUCCESS"
+  },
+  "multi": {
+    "executedAgents": [
+      "material",
+      "operation",
+      "routing",
+      "workorder"
+    ],
+    "modelConnected": true,
+    "status": "SUCCESS",
+    "elapsedMs": 4678,
+    "modelAttempted": true,
+    "fallbackReason": null,
+    "agentExecuted": true,
+    "agents": [
+      {
+        "agentId": "material",
+        "status": "SUCCESS",
+        "modelAttempted": true,
+        "modelConnected": true,
+        "fallbackReason": null
+      },
+      {
+        "agentId": "operation",
+        "status": "SUCCESS",
+        "modelAttempted": true,
+        "modelConnected": true,
+        "fallbackReason": null
+      },
+      {
+        "agentId": "routing",
+        "status": "SUCCESS",
+        "modelAttempted": true,
+        "modelConnected": true,
+        "fallbackReason": null
+      },
+      {
+        "agentId": "workorder",
+        "status": "SUCCESS",
+        "modelAttempted": true,
+        "modelConnected": true,
+        "fallbackReason": null
+      }
+    ],
+    "handoffCount": 8
+  },
+  "browser": {
+    "singleDefault": true,
+    "cards": [
+      {
+        "title": "物料 · SUCCESS",
+        "modelAccepted": true
+      },
+      {
+        "title": "工序 · SUCCESS",
+        "modelAccepted": true
+      },
+      {
+        "title": "工艺路线 · SUCCESS",
+        "modelAccepted": true
+      },
+      {
+        "title": "工单 · SUCCESS",
+        "modelAccepted": true
+      }
+    ],
+    "workbenchMaterialQuery": true,
+    "checkedAt": "2026-10-29T14:34:46.439Z"
+  },
+  "orders": {
+    "started": "IN_PROGRESS",
+    "duplicateCreate": true,
+    "createdHttp": 200,
+    "completed": "COMPLETED",
+    "duplicateStart": true,
+    "canonicalMaterial": "SERVO-DEMO-CTRL-001",
+    "illegalCompleteHttp": 409,
+    "restartHttp": 409,
+    "plannedQuantity": 1.125,
+    "snapshotSteps": 6
+  },
+  "invalidNumericJson": {
+    "parserDetailsExposed": false,
+    "status": "INVALID_INPUT",
+    "httpStatus": 400
+  },
+  "verification": {
+    "python": 135,
+    "ruff": "pass",
+    "failures": 0,
+    "skipped": 0,
+    "node": 20,
+    "migrationIdempotence": "pass",
+    "javaDefault": 180,
+    "javaManufacturingDatabase": 6,
+    "javaOriginalDatabase": 1,
+    "errors": 0
+  },
+  "modelAccuracy": null,
+  "modelAccuracyNote": "Real configured-provider connection and scenario smoke only, not an accuracy or load evaluation."
+}

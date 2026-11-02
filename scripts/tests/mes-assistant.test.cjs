@@ -24,10 +24,11 @@ class Element {
 }
 function walk(node) { return node.children.flatMap(x => [x, ...walk(x)]); }
 function setup() {
-  const names = ['widget', 'launcher', 'panel', 'close', 'clear', 'form', 'input', 'send', 'messages', 'feedback'];
+  const names = ['widget', 'launcher', 'panel', 'close', 'clear', 'form', 'input', 'send', 'messages', 'feedback', 'mode', 'context', 'material-code', 'operation-code', 'work-order-code'];
   const nodes = Object.fromEntries(names.map(name => [name, new Element()]));
   nodes.panel.hidden = true;
   nodes.widget.setAttribute('data-api', '/admin/assistant/chat');
+  nodes.mode.value = 'single';
   names.filter(name => name !== 'widget').forEach(name => nodes.widget.appendChild(nodes[name]));
   const document = new Element('document');
   Object.values(nodes).forEach(element => { element.ownerDocument = document; });
@@ -187,4 +188,47 @@ test('hybrid partial answer preserves authorized Java steps without undefined da
     steps: [{ order: 1, code: 'S1', name: '测试工序' }], citations: [] } });
   assert.ok(app.nodes.messages.textContent.includes('S1'));
   assert.equal(app.nodes.messages.textContent.includes('undefined'), false);
+});
+
+test('switching to multi aborts old request, rotates UUID and sends only structured business context', () => {
+  const app = setup(); app.submit('质量管理文档');
+  const old = app.requests[0], firstId = old.options.data.conversationId;
+  app.nodes.mode.value = 'multi'; app.nodes.mode.emit('change');
+  assert.equal(old.aborted, true);
+  assert.equal(app.nodes.context.hidden, false);
+  app.nodes['material-code'].value = 'MAT-1';
+  app.nodes['operation-code'].value = 'OP-1';
+  app.nodes['work-order-code'].value = 'WO-1';
+  app.submit('综合查询');
+  assert.equal(app.requests[1].options.url, '/admin/assistant/multi/chat');
+  assert.notEqual(app.requests[1].options.data.conversationId, firstId);
+  assert.equal(app.requests[1].options.data.materialCode, 'MAT-1');
+  assert.equal(app.requests[1].options.data.operationCode, 'OP-1');
+  assert.equal(app.requests[1].options.data.workOrderCode, 'WO-1');
+  old.resolve({ code: 0, data: { answer: '迟到的旧模式回答' } });
+  assert.equal(app.nodes.messages.textContent.includes('迟到的旧模式回答'), false);
+  app.nodes.mode.value = 'single'; app.nodes.mode.emit('change'); app.submit('工艺路线');
+  assert.equal(app.requests[2].options.url, '/admin/assistant/chat');
+  assert.equal(app.requests[2].options.data.materialCode, undefined);
+});
+
+test('multi-agent traces, handoffs and authoritative facts are rendered and copied as text', async () => {
+  const app = setup(), attack = '<img src=x onerror=alert(1)>';
+  app.nodes.mode.value = 'multi'; app.nodes.mode.emit('change'); app.submit('综合查询');
+  app.requests[0].resolve({ code: 0, data: { status: 'PARTIAL_SUCCESS', mode: 'multi-agent', answer: '汇总',
+    agentExecuted: true, agentFramework: 'LANGGRAPH_MULTI_AGENT',
+    agentResults: [{ agentId: 'routing', status: 'SUCCESS', answer: attack,
+      toolCalls: [{ name: 'get_material_routing', status: 'SUCCESS', elapsedMs: 4 }],
+      executedNodes: ['query_routing'], modelAttempted: false, modelConnected: false, fallbackReason: null }],
+    handoffs: [{ from: 'coordinator', to: 'routing', status: 'SUCCESS' }],
+    businessResults: { routing: { status: 'SUCCESS', answer: 'Java真实结果', steps: [{ code: 'OP-1', name: attack }] } } } });
+  assert.ok(app.nodes.messages.textContent.includes('get_material_routing'));
+  assert.ok(app.nodes.messages.textContent.includes('coordinator → routing'));
+  assert.ok(app.nodes.messages.textContent.includes('Java真实结果'));
+  assert.ok(app.nodes.messages.textContent.includes(attack));
+  assert.equal(walk(app.nodes.messages).some(x => x.tagName === 'img'), false);
+  const button = walk(app.nodes.messages).filter(x => x.tagName === 'button' && x.textContent === '复制回答').at(-1);
+  button.emit('click'); await Promise.resolve();
+  assert.ok(app.copied[0].includes('get_material_routing'));
+  assert.ok(app.copied[0].includes('OP-1'));
 });

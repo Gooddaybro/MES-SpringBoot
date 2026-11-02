@@ -7,6 +7,7 @@
     function byId(name) { return document.getElementById("mes-ai-" + name); }
     var launcher = byId("launcher"), panel = byId("panel"), input = byId("input");
     var form = byId("form"), send = byId("send"), messages = byId("messages"), feedback = byId("feedback");
+    var mode = byId("mode"), context = byId("context");
     var shortcuts = root.querySelectorAll("[data-question]");
     var busy = false, composing = false, generation = 0, activeRequest = null;
     function newConversationId() {
@@ -18,6 +19,7 @@
         });
     }
     var conversationId = newConversationId();
+    function isMulti() { return mode && mode.value === "multi"; }
 
     function node(tag, className, text) {
         var element = document.createElement(tag);
@@ -63,7 +65,7 @@
         var message = node("div", "mes-ai-message mes-ai-" + role);
         var parts = [text || ""];
         if (role === "bot") message.appendChild(node("div", "mes-ai-label",
-            data && data.mode === "database" ? "数据库查询结果" : data && data.mode === "hybrid" ? "数据库与资料查询" : data && data.mode === "rag" ? "知识库检索结果" : "MES 助手"));
+            data && data.mode === "multi-agent" ? "四业务多 Agent" : data && data.mode === "database" ? "数据库查询结果" : data && data.mode === "hybrid" ? "数据库与资料查询" : data && data.mode === "rag" ? "知识库检索结果" : "MES 助手"));
         message.appendChild(node("div", "mes-ai-message-body", text || ""));
         if (data && data.material) {
             var material = data.material;
@@ -89,7 +91,32 @@
             });
             table.appendChild(body); wrap.appendChild(table); message.appendChild(wrap);
         }
-        if (data && data.agentExecuted === true) {
+        if (data && data.mode === "multi-agent") {
+            var labels = { material: "物料", operation: "工序", routing: "工艺路线", workorder: "工单" };
+            var execution = data.agentExecuted === true ? "多 Agent 流程已执行" : "多 Agent 服务未执行，显示 Java 查询结果";
+            message.appendChild(node("p", "mes-ai-rag-state", execution)); parts.push(execution);
+            (data.agentResults || []).forEach(function (agent) {
+                var lines = [(labels[agent.agentId] || agent.agentId) + " · " + agent.status, agent.answer || ""];
+                (agent.toolCalls || []).forEach(function (tool) { lines.push("工具：" + tool.name + " · " + tool.status + " · " + tool.elapsedMs + " ms"); });
+                if (agent.executedNodes && agent.executedNodes.length) lines.push("执行节点：" + agent.executedNodes.join(" → "));
+                lines.push("模型请求：" + (agent.modelAttempted === true ? "已尝试" : "未尝试"));
+                lines.push("模型状态：" + (agent.modelConnected === true ? "本次响应校验通过" : "本次未调用或未通过校验"));
+                if (agent.fallbackReason) lines.push("降级原因：" + agent.fallbackReason);
+                message.appendChild(node("div", "mes-ai-agent-card", lines.join("\n"))); parts.push(lines.join("\n"));
+            });
+            var handoffs = (data.handoffs || []).map(function (handoff) { return handoff.from + " → " + handoff.to + " · " + handoff.status; });
+            if (handoffs.length) { message.appendChild(node("p", "mes-ai-handoffs", "业务交接：\n" + handoffs.join("\n"))); parts.push(handoffs.join("\n")); }
+            if (data.businessResults) {
+                var facts = node("details", "mes-ai-evidence");
+                facts.appendChild(node("summary", "", "查看 Java 实际查询结果"));
+                Object.keys(data.businessResults).forEach(function (id) {
+                    var result = data.businessResults[id], description = (labels[id] || id) + "：" + JSON.stringify(result, null, 2);
+                    facts.appendChild(node("pre", "", description)); parts.push(description);
+                });
+                message.appendChild(facts);
+            }
+        }
+        if (data && data.mode !== "multi-agent" && data.agentExecuted === true) {
             var state = "资料检索：" + (data.retrievalStatus || "NOT_REQUESTED");
             if (data.answerMode === "EXTRACTIVE_NO_MODEL") state += " · 未配置聊天模型，显示原文摘录";
             else if (data.answerMode === "GROUNDED_MODEL") state += " · 模型已选择原文依据";
@@ -120,7 +147,7 @@
             }
             if (data.source) evidence.push("来源：" + data.source);
             if (data.queriedAt) evidence.push("查询时间：" + data.queriedAt);
-            if (data.agentExecuted === true) evidence.push("知识流程：" + (data.agentFramework || "知识服务") + "；回答方式：" + (data.answerMode || "NONE"));
+            if (data.agentExecuted === true) evidence.push("执行流程：" + (data.agentFramework || "知识服务"));
             if (data.material && data.material.id) evidence.push("物料记录：" + data.material.id);
             if (data.routing && data.routing.id) evidence.push("路线记录：" + data.routing.id);
             if (Array.isArray(data.steps)) data.steps.forEach(function (step) {
@@ -146,10 +173,15 @@
         add("user", text); input.value = ""; setBusy(true);
         if (!panel.hidden) input.focus();
         var pending = add("bot", "正在查询，请稍候…", null, true), version = generation;
+        var parameters = { message: text, conversationId: conversationId };
+        if (isMulti()) ["material", "operation", "work-order"].forEach(function (name) {
+            var field = byId(name + "-code"), value = field && field.value.trim();
+            if (value) parameters[name === "work-order" ? "workOrderCode" : name + "Code"] = value;
+        });
         function removePending() { if (pending.parentNode) pending.parentNode.removeChild(pending); }
         activeRequest = window.jQuery.ajax({
-            url: root.getAttribute("data-api"), type: "POST", dataType: "json",
-            headers: { "X-Requested-With": "XMLHttpRequest" }, data: { message: text, conversationId: conversationId }, timeout: 150000
+            url: isMulti() ? (root.getAttribute("data-multi-api") || "/admin/assistant/multi/chat") : root.getAttribute("data-api"), type: "POST", dataType: "json",
+            headers: { "X-Requested-With": "XMLHttpRequest" }, data: parameters, timeout: 150000
         });
         activeRequest.done(function (response) {
             if (version !== generation) return;
@@ -173,13 +205,24 @@
     }
     launcher.addEventListener("click", function () { openPanel(panel.hidden); });
     byId("close").addEventListener("click", function () { openPanel(false); });
-    byId("clear").addEventListener("click", function () {
+    function resetConversation() {
         generation += 1;
         conversationId = newConversationId();
         if (activeRequest) { activeRequest.abort(); activeRequest = null; }
         while (messages.firstChild) messages.removeChild(messages.firstChild);
-        input.value = ""; feedback.textContent = "对话已清空。"; setBusy(false); input.focus();
+        input.value = ""; setBusy(false);
+    }
+    byId("clear").addEventListener("click", function () {
+        resetConversation();
+        ["material-code", "operation-code", "work-order-code"].forEach(function (name) { var field = byId(name); if (field) field.value = ""; });
+        feedback.textContent = "对话已清空。"; input.focus();
     });
+    if (mode) mode.addEventListener("change", function () {
+        resetConversation();
+        if (context) context.hidden = !isMulti();
+        feedback.textContent = isMulti() ? "已切换多 Agent：查询物料、工序、工艺路线和工单。" : "已切换单 Agent：工艺路线与知识查询。";
+    });
+    if (context) context.hidden = !isMulti();
     form.addEventListener("submit", function (event) { event.preventDefault(); if (!composing) ask(input.value); });
     input.addEventListener("compositionstart", function () { composing = true; });
     input.addEventListener("compositionend", function () { composing = false; });
@@ -194,5 +237,5 @@
     Array.prototype.forEach.call(shortcuts, function (button) {
         button.addEventListener("click", function () { ask(button.getAttribute("data-question")); });
     });
-    add("bot", "你好！我可以按物料编码查询工艺路线，也可检索已授权PDF并显示文件名、物理页码和原文。知识服务启用后支持连续追问；未配置聊天模型时显示原文摘录。复合查询会向内部知识服务提供必要的工艺结果；配置外部模型后会发送相关问题与资料片段。请勿填写敏感信息。BOM齐套和报工尚未接入。");
+    add("bot", "你好！单 Agent 支持工艺路线与授权 PDF 查询。切换多 Agent 可查询物料、工序、工艺路线和工单，并查看各业务的真实查询结果与执行状态。业务工作台可创建工单及变更状态。配置外部模型后会发送相关问题与授权查询结果，请勿填写敏感信息。");
 })();

@@ -3,13 +3,14 @@ import math
 
 import httpx
 import pytest
+from reportlab.pdfgen import canvas
+
 from app.rag.embeddings import EmbeddingError, JinaEmbeddings
 from app.rag.loader import load_pages
 from app.rag.models import DocumentSpec
 from app.rag.retriever import KnowledgeRetriever
 from app.rag.splitter import split_pages
 from app.rag.store import VectorStore
-from reportlab.pdfgen import canvas
 
 
 class TestEmbeddings:

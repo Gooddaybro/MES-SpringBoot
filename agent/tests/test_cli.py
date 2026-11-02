@@ -1,12 +1,13 @@
 import json
 
+from test_rag import TestEmbeddings, spec
+
 from app import cli
 from app.config import Settings
 from app.rag.loader import Page
 from app.rag.retriever import KnowledgeRetriever
 from app.rag.splitter import split_pages
 from app.rag.store import VectorStore
-from test_rag import TestEmbeddings, spec
 
 
 def test_targeted_ingest_revokes_previously_approved_document(tmp_path, monkeypatch):

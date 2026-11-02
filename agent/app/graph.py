@@ -198,6 +198,21 @@ class KnowledgeWorkflow:
         return {"retrievedDocuments": result.documents, "error": errors.get(result.status)}
 
     @staticmethod
+    def _source_quote(text: str, quote: str) -> str | None:
+        if not quote.strip():
+            return None
+        if quote in text:
+            return quote if len(quote) <= 1200 else None
+        # Models may flatten PDF whitespace; always return the untouched source span.
+        characters = list(re.finditer(r"\S", text))
+        needle = re.sub(r"\s+", "", quote)
+        start = "".join(character.group() for character in characters).find(needle)
+        if start < 0:
+            return None
+        restored = text[characters[start].start() : characters[start + len(needle) - 1].end()]
+        return restored if len(restored) <= 1200 else None
+
+    @staticmethod
     def _citation(doc: RetrievedDocument, quote: str) -> Citation:
         return Citation(
             documentId=doc.documentId,
@@ -260,12 +275,12 @@ class KnowledgeWorkflow:
                 for item in chosen:
                     doc = source.get(item.get("chunkId"))
                     quote = item.get("quote")
-                    if (
-                        not doc
-                        or not isinstance(quote, str)
-                        or not quote.strip()
-                        or quote not in doc.text
-                    ):
+                    quote = (
+                        self._source_quote(doc.text, quote)
+                        if doc and isinstance(quote, str)
+                        else None
+                    )
+                    if not quote:
                         raise ModelError("LLM_UNGROUNDED")
                     citations.append(self._citation(doc, quote))
                 response.citations = citations

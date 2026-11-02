@@ -8,7 +8,7 @@ import time
 from collections.abc import Mapping
 from uuid import UUID
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.schemas import AgentRequest
 
@@ -32,7 +32,8 @@ class RequestVerifier:
         *,
         method: str = "POST",
         path: str = "/api/agent/chat",
-    ) -> AgentRequest:
+        request_model: type[BaseModel] = AgentRequest,
+    ) -> BaseModel:
         if len(self.secret) < 32 or len(body) > 65536:
             raise AuthError()
         values = {k.lower(): v for k, v in headers.items()}
@@ -51,7 +52,7 @@ class RequestVerifier:
             ).hexdigest()
             if not hmac.compare_digest(expected, signature):
                 raise AuthError()
-            data = AgentRequest.model_validate_json(body)
+            data = request_model.model_validate_json(body)
             context = data.authorizedContext
             if (
                 data.requestId != nonce

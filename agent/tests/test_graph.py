@@ -1,10 +1,12 @@
 import asyncio
 import json
 import time
+from dataclasses import replace
 from uuid import uuid4
 
 import httpx
 import pytest
+
 from app.config import Settings
 from app.graph import KnowledgeWorkflow
 from app.llm import DeepSeekClient, ModelError
@@ -188,6 +190,40 @@ async def test_model_can_select_only_exact_retrieved_evidence():
     assert fallback.answerMode == "EXTRACTIVE_FALLBACK"
     assert fallback.fallbackReason == "LLM_UNGROUNDED"
     assert not fallback.modelConnected and "编造" not in fallback.answer
+
+
+async def test_model_quote_with_flattened_pdf_whitespace_restores_exact_source():
+    original = "注重价值牵引，\n  强化数据驱动。"
+    document = replace(DOCUMENT, text="前言。\n" + original + "\n结束。")
+    selected = [{"chunkId": document.chunkId, "quote": "注重价值牵引，强化数据驱动。"}]
+    response = await KnowledgeWorkflow(
+        settings(), Retriever(documents=[document]), model=FakeModel(selected)
+    ).run(request())
+    assert response.answerMode == "GROUNDED_MODEL" and response.modelConnected
+    assert response.citations[0].quote == original
+    assert response.citations[0].quote in document.text
+    assert response.fallbackReason is None
+
+
+@pytest.mark.parametrize(
+    ("text", "quote"),
+    [
+        ("额定电压为 24\n V。", "额定电压为240V。"),
+        ("注重数据\n驱动。", "注重经验驱动。"),
+        ("注重数据\n驱动。", "注重数据驱动！"),
+        ("甲" + " " * 1200 + "乙", "甲乙"),
+    ],
+)
+async def test_whitespace_matching_still_rejects_changed_facts_or_overlong_source(text, quote):
+    document = replace(DOCUMENT, text=text)
+    selected = [{"chunkId": document.chunkId, "quote": quote}]
+    response = await KnowledgeWorkflow(
+        settings(), Retriever(documents=[document]), model=FakeModel(selected)
+    ).run(request())
+    assert response.answerMode == "EXTRACTIVE_FALLBACK"
+    assert response.fallbackReason == "LLM_UNGROUNDED"
+    assert not response.modelConnected
+    assert all(citation.quote in document.text for citation in response.citations)
 
 
 @pytest.mark.parametrize("code", ["LLM_TIMEOUT", "LLM_UNAVAILABLE", "LLM_INVALID_RESPONSE"])

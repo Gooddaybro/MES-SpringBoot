@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-29",
+  "timezone": "Asia/Shanghai",
+  "kind": "real-service-smoke",
+  "environment": "local study database; JDK8; same configuration and arguments as MES-IDEA-Local; separate test process",
+  "model": "deepseek-flash",
+  "llmBaseUrl": "https://api.deepseek.com",
+  "chatModelAccuracy": null,
+  "chatModelAccuracyNote": "Connection and scenario checks only; frozen retrieval evaluation not rerun.",
+  "pythonTests": {
+    "passed": 57,
+    "failed": 0
+  },
+  "databaseIntegrationTests": {
+    "passed": 1,
+    "failed": 0
+  },
+  "configuration": ".local/application-idea.yml",
+  "port": 9091,
+  "anonymousJavaHttpStatus": 401,
+  "loginCode": 0,
+  "routing": {
+    "httpStatus": 200,
+    "status": "SUCCESS",
+    "mode": "database",
+    "retrievalStatus": null,
+    "answerMode": null,
+    "recognitionSource": "RULE",
+    "modelAttempted": false,
+    "modelConnected": false,
+    "fallbackReason": null,
+    "elapsedMs": 127,
+    "stepCount": 6,
+    "citations": []
+  },
+  "composite": {
+    "httpStatus": 200,
+    "status": "SUCCESS",
+    "mode": "hybrid",
+    "retrievalStatus": "SUCCESS",
+    "answerMode": "GROUNDED_MODEL",
+    "recognitionSource": "MODEL",
+    "modelAttempted": true,
+    "modelConnected": true,
+    "fallbackReason": null,
+    "elapsedMs": 2093,
+    "stepCount": 6,
+    "citations": [
+      {
+        "filename": "04_制造业质量管理数字化实施指南_试行.pdf",
+        "pageNumber": 2
+      }
+    ]
+  }
+}

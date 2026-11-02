@@ -1,5 +1,7 @@
 # MES-SpringBoot 二次开发：架构、路线与改造日志
 
+> 最新状态（2026-10-29，R005）：单Agent保留；四业务明确为物料、工序、工艺路线、工单，新增独立多Agent及基础持久化工单，完成真实模型与浏览器验收。见[R005说明](R005-多Agent与四业务验收.md)和文末R005条目。下方原路线表/旧编号保留各阶段历史，B3完整过站/SN/报工规则仍待独立建设。
+
 > 维护日期：2026-10-26
 > 仓库： https://github.com/Gooddaybro/MES-SpringBoot
 > 本轮源码核对基线：`6348d20f38352e9237cc0dda8ce0cd7aec68f678`（master，2026-10-22）
@@ -395,6 +397,32 @@ flowchart TD
 - 实际代码提交：[`73cffb9bb5bd1456dde2991901038cb92fd5909d`](https://github.com/Gooddaybro/MES-SpringBoot/commit/73cffb9bb5bd1456dde2991901038cb92fd5909d)，`feat: 新增受控LangGraph与Jina PDF检索框架`，50文件；已成功推送origin/agent。M1–M6属于同一实际实现提交，本日志按阶段分别记录，未捏造独立SHA。文档同步为随后单独提交，其自身SHA仅在成功后由Git历史/交付回复核对。
 - 代码回滚可先关闭MES_AGENT_ENABLED并重启Java/停Python；需要Git撤销时先审阅`git revert 73cffb9bb5bd1456dde2991901038cb92fd5909d`对后续文档和本机配置的影响，本次未执行。它不会删除外置PDF、派生索引或数据库权限；权限撤销按M5指定角色独立处理。
 
+#### 2026-10-29 · R004-M7 · IDEA依赖排查与真实DeepSeek引用验收
+
+- 子项：C；状态：已实施、已验证（本机学习环境，未提交）。保留前述R004初交付时无聊天Key的历史状态，本条记录用户配置Key后的新增证据。
+- 背景：用户点击IDEA运行后报告数据库连接错误。开始检查时3308/6380/9090/8001均未监听，客户端实际报`ERROR 2003 ... 127.0.0.1:3308 (10061)`；3306是另一系统实例。使用既有Start-Local与Start-Agent恢复，不重导SQL、不改表、不重建索引，教学样例仍为6道工序。
+- IDEA：已有MES-IDEA-Local使用JDK8/local/私有application-idea.yml/9091，Java按钮不会启动数据库或Python。仅在被忽略的私有YAML同步MES_AGENT_*内部桥接配置，不将模型Key复制到Java。正常脚本实例另在9090，登录与页面需对应各自端口。新电脑仍须自行准备本地文件及路径。
+- 真实模型根因：第一次知识请求检索成功但为EXTRACTIVE_FALLBACK/LLM_UNGROUNDED；随后捕获实际DeepSeek HTTP200和合法证据JSON，确认是模型压平PDF换行/空格，非空白字符一致。它不是数据库或凭据故障。原modelConnected=false表示模型证据未被接受，不能单独当成网络失败结论。
+- 改动：`agent/app/graph.py`新增_source_quote，仅对非空白字符逐字一致的引用还原检索片段内连续原文，再执行原有来源/权限/精确引用校验和1200字符上限。未知片段、改字、改数字、改标点与超长仍降级，不更改模型请求、工具、权限或写入边界。修改`agent/tests/test_graph.py`、Python README和三份既有主文档；新增脱敏实测JSON。
+- 取舍：保留严格拒绝会持续把正常PDF排版差异当失败；完全放宽文本匹配会接受无依据改写。本次仅恢复空白，最终返回原PDF片段内精确原文，不返回被模型改写的引用。
+- 回归：新增5个场景。修复前定向运行1失败/4通过，失败正是压平空白导致降级；修复后图测试27通过，完整Python57通过（5.84s），ruff通过。实际HTTP200捕获数据回放还原成功。未修改Java代码，显式本机SQL/真实Realm/过滤器只读IT1通过（BUILD SUCCESS，2026-10-29 17:04:12 +08:00）。
+- 联调：采用相同IDEA私有配置及启动参数的独立JDK8进程，正常验证码登录，匿名Java请求401。纯路线SUCCESS/6工序/RULE/未调用模型/127ms；复合查询SUCCESS/6工序/质量指南物理第2页/GROUNDED_MODEL/MODEL/modelAttempted=true/modelConnected=true/fallbackReason=null/2093ms。未宣称自动操作IDEA按钮或浏览器UI验收。[脱敏证据](evals/R004-deepseek-smoke-20261029.json)，私有捕获与日志仅保留在被忽略的`.local/diagnostics-20261029/`，不提交密钥、Cookie或原件全文。
+- 实测范围：确认当前凭据/网络下Python DeepSeek证据选择及签名Java复合链路可用；不是Java R003独立意图模型的验收，不是模型准确率评测。未重跑冻结20题/跨页检索集，不改历史分数；生产部署、回答覆盖率、OCR及B1–B5仍按原路线单独验收。
+- 回滚：可将本次_source_quote调用恢复为严格原文子串检查并重启Python，排版差异会再次降级；也可清空私有DeepSeek Key后重启Python，恢复纯摘录。保留原数据、原件和索引；私有IDEA YAML修改前副本在诊断目录。Commit：本次尚未提交，不预填SHA。
+
+### 2026-10-29 · R005 · 保留单Agent并接入四业务多Agent
+
+- 用户明确范围：物料、工序、工艺路线、工单。前三项复用现有主数据；新建独立工单表。没有按之前候选范围开发BOM/库存/报工。
+- 状态：已实施、已验证（本机3308/mes_study，Java9090、Python8001）；当前工作区未提交/推送。保留此前R004-M7未提交修复，不重置原文件/私有配置。
+- 结构：新增Python独立multi schema/model/graph、签名multi入口；四个独立LangGraph子图、角色提示、私有模型上下文和唯一只读事实工具；Java新增MultiAgentService/Controller，按登录权限预查、签名并验证响应，保留不可被模型覆盖的businessResults。原单Agent入口和默认界面行为保持。
+- 业务：MasterDataQueryService复用原物料和工序表，路线复用原Service。WorkOrderService独立持久化、创建冻结工艺、唯一工单号、BigDecimal数量，CREATED→IN_PROGRESS→COMPLETED及CREATED→CANCELLED，显式工作台写入和事务/幂等保护。基础工单不等于工序执行/SN/报工/库存。
+- 数据/权限：独立r005_work_order.sql、r005_multi_agent_permission.sql、r005_work_order_sample.sql；仅明确本机学习角色启用新增权限；教学WO-SERVO-DEMO-001=CREATED/10/6道快照工序。重复迁移/授权/种子及未启用无变更检查通过，原四表记录保留。
+- 验证：JDK8默认完整package180通过，0失败/错误/跳过；新MySQL IT6与原只读/真实Realm IT1分别独立JVM通过；Python135、Ruff、Node16+4、JS语法通过。原未命名Ehcache使不同Spring上下文合并IT运行冲突，故按独立命令执行，不改原缓存部署。
+- 实测：正常验证码登录；真实多Agent请求4个SUCCESS，各自modelAttempted/modelConnected=true，无降级，一次4678ms。最终浏览器默认single、切换multi取得4个成功Agent及已通过模型证据、工作台真实物料查询；旧单入口SUCCESS/6工序/无模型。真实HTTP工单创建1.125/大小写规范/重复创建/非法完工409/开工及重复/完工/重启409均验证，临时工单按精确编号与ID清理。
+- 审查：规范和质量独立审查通过。先复现再修复状态描述与对象在前命令识别、小数被Double舍入、规范物料编码/大小写、全局异常Advice将解析错误改为200并暴露细节、物料范围工序大小写不一致；最终错误数量HTTP400且无内部解析细节。
+- 来源与局限：外部聊天模型可接收本次相应Java业务事实，前端已说明；不转发用户Cookie或DB凭据。仅本机受控协调器+子Agent，不是无限自主规划，不宣称模型准确率、生产负载或生产部署验收。记录与命令见R005报告及脱敏JSON。
+- 回退：选择单Agent即可恢复旧使用方式；不自动删表/工单/权限。没有执行DROP或无范围删除。Commit：尚未提交，不预填SHA。
+
 ### 2026-10-30 · 数据库版本管理 · Flyway 集成
 
 - 状态：**已实施、已验证（JDK8 / MySQL8.0.46 / 本机3308临时库）**。当前 agent 分支；按用户补充要求分组本地 `feat：中文` 提交，不推送。既有 R004/R005 Java、Python、前端及相关未提交文档保留，不混入本次提交；dev 文件沿用已有本机配置并修正静态资源映射。
@@ -406,6 +434,14 @@ flowchart TD
 - 证据：[脱敏结果](evals/Flyway-20261030.json)、[运行指南](Flyway数据库初始化与版本管理指南.md)。本机私有日志/备份在忽略的.local/flyway-smoke-9ea92ec9296f4964a034bcaafde2d1c3/，不提交密码、Cookie或业务行。真实3308/mes_study前后18张表行哈希及数量完全一致，没有新增history。
 - 未验证/风险：3306凭据与库内容未验收；原3308旧库只读，尚未正式baseline/迁移。浏览器验证码提交及IDEA按钮未自动操作；Redis、真实Agent/模型、BOM业务/旧字段映射、生产和多物理电脑部署未验收。完整R005服务smoke依赖工作区原有R005代码，该部分仍待其自身另行提交。MySQL DDL不能保证整体回滚，失败须停写、备份、逐对象检查后选择恢复或审阅过的修复，禁止盲目repair。
 - 回退：停用dev的Flyway或切回原local配置可以停止自动升级；Git回退不撤销已执行DDL、history、账号或样例数据。保留数据库备份，任何表/列/业务数据回退另行审阅。提交SHA以实际git log为准，不预填自身SHA。
+
+### 2026-11-02 · R005发布整理 · 四业务多Agent提交
+
+- 用户授权：将此前保留的R004-M7修复、R005四业务多Agent及相关文档提交并推送到现有agent分支，采用`feat：中文`提交信息。
+- 内容：保留单Agent；新增物料/工序/工艺路线/工单独立子Agent、签名桥接、模式切换、工单工作台、测试及脱敏实测记录。已存在的Flyway三笔提交保持原样，不改迁移checksum、私有配置或原业务数据。
+- 提交名称：`feat：保留单Agent并接入物料工序工艺路线工单多Agent`。本记录随实现一同提交，实际SHA以Git历史及远端agent引用为准，不预填自身SHA。
+- 新鲜验证：JDK8默认Java测试182通过，0失败/错误/跳过；Python135通过且Ruff通过；Node16+4通过，两份JS语法检查通过。10月29日数据库6+1和真实模型/浏览器验收保留为历史证据，本次未重复外部模型调用或数据库写入测试。
+- 发布范围不含`.local/`、API Key、数据库口令、Cookie、原PDF、向量索引、虚拟环境和构建产物。
 
 ### 后续日志模板（每次复制一段并填充）
 

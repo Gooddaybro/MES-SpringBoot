@@ -8,6 +8,8 @@ from starlette.requests import ClientDisconnect
 
 from app.config import Settings
 from app.graph import KnowledgeWorkflow
+from app.multi_graph import MultiAgentWorkflow
+from app.multi_schemas import MultiAgentRequest
 from app.runtime import create_retriever
 from app.security import AuthError, RequestVerifier
 
@@ -24,10 +26,13 @@ def create_app(settings: Settings | None = None, retriever=None) -> FastAPI:
         selected = create_retriever(settings) if managed_retriever else retriever
         workflow = KnowledgeWorkflow(settings, selected)
         application.state.workflow = workflow
+        multi_workflow = MultiAgentWorkflow(settings)
+        application.state.multi_workflow = multi_workflow
         try:
             yield
         finally:
             await workflow.model.close()
+            await multi_workflow.close()
             if managed_retriever:
                 selected.embeddings.close()
 
@@ -81,6 +86,29 @@ def create_app(settings: Settings | None = None, retriever=None) -> FastAPI:
             return response.model_dump(exclude_none=False)
         except Exception:  # noqa: BLE001 - sanitize unexpected errors at the HTTP boundary.
             logger.error("agent_failed requestId=%s code=INTERNAL_ERROR", signed.requestId)
+            return JSONResponse(
+                {"error": "INTERNAL_ERROR", "requestId": signed.requestId}, status_code=500
+            )
+
+    @application.post("/api/multi-agent/chat")
+    async def multi_chat(request: Request):
+        try:
+            body = await asyncio.wait_for(read_body(request), timeout=3)
+            signed = verifier.verify(
+                body, request.headers, method=request.method, path=request.url.path,
+                request_model=MultiAgentRequest,
+            )
+        except (AuthError, ValueError, ClientDisconnect, TimeoutError):
+            return JSONResponse({"error": "UNAUTHORIZED"}, status_code=401)
+        try:
+            response = await application.state.multi_workflow.run(signed)
+            logger.info(
+                "multi_agent_request requestId=%s status=%s elapsedMs=%s modelAttempted=%s",
+                signed.requestId, response.status, response.elapsedMs, response.modelAttempted,
+            )
+            return response.model_dump(exclude_none=False, by_alias=True)
+        except Exception:  # noqa: BLE001 - sanitize unexpected errors at the HTTP boundary.
+            logger.error("multi_agent_failed requestId=%s code=INTERNAL_ERROR", signed.requestId)
             return JSONResponse(
                 {"error": "INTERNAL_ERROR", "requestId": signed.requestId}, status_code=500
             )

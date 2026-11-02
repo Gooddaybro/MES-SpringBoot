@@ -5,6 +5,7 @@ import time
 from uuid import uuid4
 
 import pytest
+
 from app.schemas import AgentRequest
 from app.security import AuthError, RequestVerifier
 

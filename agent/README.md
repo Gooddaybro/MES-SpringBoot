@@ -1,6 +1,6 @@
 # MES Python LangGraph / PDF RAG
 
-这是仓库内的独立Python服务，Java8仍负责登录、业务权限和数据库查询。当前可运行真实PDF检索，无需聊天模型Key；Jina提供向量，Chroma保存在本机。未配置DeepSeek时只显示检索原文，不宣称模型生成了总结。
+这是仓库内的独立Python服务，Java8仍负责登录、业务权限和数据库查询。保留R004单Agent/PDF检索，新增R005物料、工序、工艺路线、工单四个独立Agent，抽屉默认单Agent并可切换。R005调用、工单初始化和实测见[四业务说明](../docs/R005-多Agent与四业务验收.md)。原PDF路径无需聊天Key，Jina提供向量，Chroma本机保存；未配置DeepSeek时明确显示事实/原文，不宣称模型总结。
 
 ## 1. 本机与跨电脑启动
 
@@ -12,7 +12,7 @@ uv sync --frozen --project agent
 ./scripts/local/Start-Agent.ps1
 ```
 
-编辑本机`.local/agent.env`，填写`JINA_API_KEY`；保留`DEEPSEEK_API_KEY=`为空。Key不能填在网页、代码或Git跟踪文件中。修改配置后重启：
+编辑本机`.local/agent.env`，填写`JINA_API_KEY`；需要聊天模型时填写`DEEPSEEK_API_KEY`，暂不使用时留空。Key不能填在网页、代码或Git跟踪文件中。修改配置后重启：
 
 ```powershell
 ./scripts/local/Stop-Agent.ps1
@@ -20,7 +20,7 @@ uv sync --frozen --project agent
 Invoke-RestMethod http://127.0.0.1:8001/health
 ```
 
-`health`的`embeddingConfigured`/`llmConfigured`仅表示存在配置，不能证明网络请求成功。真实连接证据见[评测报告](../docs/R004-Agent与RAG评测报告.md)。当前Jina已实调；DeepSeek按用户要求留待以后。
+`health`的`embeddingConfigured`/`llmConfigured`仅表示存在配置，不能证明网络请求成功。Jina检索评测见[评测报告](../docs/R004-Agent与RAG评测报告.md)。2026-10-29用户配置DeepSeek后，已实际收到HTTP 200；修复PDF空白还原后，Java签名复合查询返回`GROUNDED_MODEL`、`modelConnected=true`和真实页码引用。此次为连接与单场景链路验收，未测量聊天模型准确率。
 
 在新电脑把已授权原件放到仓库上一级`pdf文档/`，或设置`AGENT_PDF_DIR`指向它；不要复制虚拟环境和Chroma来替代可复现安装。24份文件名及SHA256在[manifest.json](documents/manifest.json)。原件由用户另外提供，Git不携带。清单以明确授权和实际文件为准，不能仅因目录新增PDF就自动批准。
 
@@ -55,11 +55,11 @@ uv run --project agent python -m app.cli status
 | AGENT_PDF_DIR | 默认仓库上一级`pdf文档`，不从网页传入路径 |
 | AGENT_TOP_K / MIN_SIMILARITY | 5 / 0.38；cosine阈值不是置信概率 |
 | AGENT_MAX_CONTEXT_CHARACTERS | 文档上下文6000字符；先按ACL检索最多30个候选，再本地BM25重排 |
-| DEEPSEEK_API_KEY | 当前留空；以后由用户在私有文件填写 |
+| DEEPSEEK_API_KEY | 可选，由用户在私有文件填写；留空时只返回原文摘录 |
 | AGENT_LLM_BASE_URL / MODEL | `https://api.deepseek.com` / `deepseek-flash` |
 | AGENT_LLM_TIMEOUT_SECONDS | 15s；不自动重试聊天请求 |
 
-DeepSeek模型名按2026-10-27核实的[官方文档](https://api-docs.deepseek.com/quick_start/agent_integrations/)配置；实际服务以供应商账户权限为准。适配器调用`/chat/completions`，关闭thinking、要求JSON证据选择。它只能选择本次检索片段的精确原文，不生成新的生产参数。填Key后应重新运行真实服务验收，当前HTTP替身测试不替代该步骤。Java原R003的`MES_LLM_*`是另一套可选意图识别配置，仍默认禁用，不是Python的Key设置入口。
+DeepSeek模型名按2026-10-29核实的[官方文档](https://api-docs.deepseek.com/quick_start/agent_integrations/)配置；实际服务以供应商账户权限为准。适配器调用`/chat/completions`，关闭thinking、要求JSON证据选择。它只能选择本次检索片段的原文，不生成新的生产参数。若模型压平PDF换行或空格，服务仅在非空白字符逐字一致时还原对应连续原文，最终引用仍须精确存在于该片段且不超过1200字符；改字、改数字、改标点或未知片段仍降级。填Key或更换网络后应重新运行真实服务验收，HTTP替身测试不替代该步骤。Java原R003的`MES_LLM_*`是另一套可选意图识别配置，仍默认禁用，不是Python的Key设置入口。
 
 ## 3. 真实请求链与图
 
@@ -151,4 +151,18 @@ pytest使用临时PDF/索引和明确的测试向量、HTTP替身，不消耗真
 
 设置`MES_AGENT_ENABLED=false`并重启Java可停用Python入口，原工艺查询保留；停止Python即可停用知识服务。删除派生索引前可以备份整个`agent/data`，不动原PDF或业务表。知识按钮权限的回滚只撤销本次指定角色的关联，不删除其他角色权限。
 
-DeepSeek真实凭据/网络验收、生产库、远程部署、OCR、长期记忆和自动多步规划均未验证或未实现。BOM、库存、工单、报工、统计继续按B0–B5独立路线推进；本服务没有顺带实现这些制造业务。
+DeepSeek已完成本机真实连接与单场景链路验收；回答质量评测、生产库、远程部署、OCR、长期记忆和自动多步规划仍待验证或未实现。R005另已补充基础工单创建/状态/快照及四业务多Agent，详见第9节；BOM、库存、工序执行/报工和统计继续按原路线独立推进。
+
+## 8. IDEA启动时数据库连接失败
+
+IDEA的Java运行按钮不会启动独立MySQL、Redis或Python。本机`MES-IDEA-Local`读取私有`.local/application-idea.yml`，连接`127.0.0.1:3308/mes_study`、监听9091；原`dev`配置仍带历史数据库地址。先在仓库根目录执行`./scripts/local/Start-Local.ps1`和`./scripts/local/Start-Agent.ps1`，再运行IDEA的`MES-IDEA-Local`；启动脚本另有9090实例，页面和登录会话要使用对应端口。
+
+IDEA私有YAML还须同步`.local/agent.env`中的`MES_AGENT_ENABLED`、`MES_AGENT_BASE_URL`及`MES_AGENT_SHARED_SECRET`（有自定义超时则一并同步），Java才可签名访问Python；本机已同步。DeepSeek/Jina Key只留在Python私有环境文件，不复制到Java。另一个3306端口的MySQL不是该学习库；不要通过改端口、重导SQL或删除数据目录处理一般连接拒绝。详细操作见[主运行指南第4.3节](../docs/AI助手接入与运行指南.md#43-idea运行与依赖启动)。
+
+## 9. R005四业务多Agent
+
+保留原`POST /api/agent/chat`，新增独立签名`POST /api/multi-agent/chat`。Java新入口是`POST /admin/assistant/multi/chat`，问题和可选物料/工序/工单编码由Java校验并预查；Python只消费本次授权结果。四个分别编译的子图为material/get_material、operation/get_operations、routing/get_material_routing、workorder/get_work_order，各有独立角色提示、私有上下文和工具调用；协调器受控分派并发子任务，总期限30秒。
+
+配置DeepSeek时各子Agent独立请求模型，校验选中证据与真实事实完全一致；无Key、模型错误或部分业务失败时明确降级。多Agent模型会接收问题及相应Java授权业务事实，单Agent原PDF发送范围不变。没有数据库、Cookie、SQL或业务写入工具。
+
+物料/工序/路线来自原表；工单由Java新`mes_work_order`服务持久化，创建时冻结工艺。新电脑须先明确应用`scripts/sql/r005_work_order.sql`和本机角色权限脚本，再使用可选教学种子。完整步骤、界面示例、调用图和测试命令见[验收说明](../docs/R005-多Agent与四业务验收.md)。
