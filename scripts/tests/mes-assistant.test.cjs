@@ -24,7 +24,7 @@ class Element {
 }
 function walk(node) { return node.children.flatMap(x => [x, ...walk(x)]); }
 function setup() {
-  const names = ['widget', 'launcher', 'panel', 'close', 'clear', 'form', 'input', 'send', 'messages', 'feedback', 'mode', 'context', 'material-code', 'operation-code', 'work-order-code'];
+  const names = ['widget', 'launcher', 'panel', 'close', 'clear', 'form', 'input', 'send', 'messages', 'feedback', 'mode', 'context', 'material-code', 'operation-code', 'work-order-code', 'material-name', 'operation-name', 'state', 'created-from', 'created-to', 'page', 'page-size'];
   const nodes = Object.fromEntries(names.map(name => [name, new Element()]));
   nodes.panel.hidden = true;
   nodes.widget.setAttribute('data-api', '/admin/assistant/chat');
@@ -231,4 +231,24 @@ test('multi-agent traces, handoffs and authoritative facts are rendered and copi
   button.emit('click'); await Promise.resolve();
   assert.ok(app.copied[0].includes('get_material_routing'));
   assert.ok(app.copied[0].includes('OP-1'));
+});
+
+test('multi mode sends explicit name state date and pagination filters while single mode keeps its contract', () => {
+  const app = setup(); app.nodes.mode.value = 'multi'; app.nodes.mode.emit('change');
+  app.nodes['material-name'].value = '伺服'; app.nodes['operation-name'].value = '老化测试';
+  app.nodes.state.value = 'CREATED'; app.nodes['created-from'].value = '2026-11-01T00:00';
+  app.nodes.page.value = '2'; app.nodes['page-size'].value = '5'; app.submit('查询关联物料和工单');
+  const filters = app.requests[0].options.data;
+  assert.equal(filters.materialName, '伺服'); assert.equal(filters.operationName, '老化测试');
+  assert.equal(filters.state, 'CREATED'); assert.equal(filters.createdFrom, '2026-11-01T00:00');
+  assert.equal(filters.page, '2'); assert.equal(filters.pageSize, '5');
+  app.nodes.mode.value = 'single'; app.nodes.mode.emit('change'); app.submit('100112');
+  assert.equal(app.requests[1].options.data.operationName, undefined);
+});
+
+test('server validation messages stay visible instead of replacing them with a code-only hint', () => {
+  const app = setup(); app.submit('查询物料');
+  app.requests[0].responseJSON = { data: { status: 'INVALID_INPUT', answer: '创建时间起点必须早于终点。' } };
+  app.requests[0].reject(400, 'error');
+  assert.ok(app.nodes.messages.textContent.includes('创建时间起点必须早于终点。'));
 });

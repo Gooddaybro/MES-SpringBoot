@@ -8,6 +8,7 @@
     var launcher = byId("launcher"), panel = byId("panel"), input = byId("input");
     var form = byId("form"), send = byId("send"), messages = byId("messages"), feedback = byId("feedback");
     var mode = byId("mode"), context = byId("context");
+    var searchFields = { "material-name": "materialName", "operation-name": "operationName", state: "state", "created-from": "createdFrom", "created-to": "createdTo", page: "page", "page-size": "pageSize" };
     var shortcuts = root.querySelectorAll("[data-question]");
     var busy = false, composing = false, generation = 0, activeRequest = null;
     function newConversationId() {
@@ -178,6 +179,10 @@
             var field = byId(name + "-code"), value = field && field.value.trim();
             if (value) parameters[name === "work-order" ? "workOrderCode" : name + "Code"] = value;
         });
+        if (isMulti()) Object.keys(searchFields).forEach(function (name) {
+            var field = byId(name), value = field && field.value.trim();
+            if (value) parameters[searchFields[name]] = value;
+        });
         function removePending() { if (pending.parentNode) pending.parentNode.removeChild(pending); }
         activeRequest = window.jQuery.ajax({
             url: isMulti() ? (root.getAttribute("data-multi-api") || "/admin/assistant/multi/chat") : root.getAttribute("data-api"), type: "POST", dataType: "json",
@@ -195,8 +200,8 @@
             if (xhr.status === 401) hint = "登录已过期，请重新登录MES后重试。";
             else if (xhr.status === 403) hint = "没有本次查询所需权限，请联系管理员授权后重新登录。";
             else if (reason === "timeout" || xhr.status === 504) hint = "查询超时，请稍后重试；本次未取得可靠结果。";
-            else if (xhr.status === 400) hint = "输入参数不正确，请使用单个完整物料编码重试。";
             else if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.answer) hint = xhr.responseJSON.data.answer;
+            else if (xhr.status === 400) hint = "查询条件无效，请核对名称、编码、时间范围和分页条件。";
             add("bot", hint, xhr.responseJSON && xhr.responseJSON.data);
         }).always(function () {
             if (version !== generation) return;
@@ -214,7 +219,7 @@
     }
     byId("clear").addEventListener("click", function () {
         resetConversation();
-        ["material-code", "operation-code", "work-order-code"].forEach(function (name) { var field = byId(name); if (field) field.value = ""; });
+        ["material-code", "operation-code", "work-order-code"].concat(Object.keys(searchFields)).forEach(function (name) { var field = byId(name); if (field) field.value = ""; });
         feedback.textContent = "对话已清空。"; input.focus();
     });
     if (mode) mode.addEventListener("change", function () {

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.*;
 
 @Service
@@ -44,6 +45,29 @@ public class WorkOrderService {
         result.put("truncated", rows.size() > 20);
         result.put("source", "mes_work_order（工艺快照）");
         if (code != null && orders.size() == 1) result.put("workOrder", orders.get(0));
+        return result;
+    }
+
+    @Transactional(readOnly = true, timeout = 8)
+    public Map<String,Object> search(BusinessQuery query, String operationId) {
+        String sql = SELECT + " WHERE 1=1";
+        List<Object> args = new ArrayList<>();
+        if (query.workOrderCode != null) { sql += " AND order_code=?"; args.add(query.workOrderCode); }
+        if (query.materialCode != null) { sql += " AND material_code COLLATE utf8mb4_unicode_ci=?"; args.add(query.materialCode); }
+        if (query.state != null) { sql += " AND state=?"; args.add(query.state); }
+        if (query.createdFrom != null) { sql += " AND created_at>=?"; args.add(Timestamp.valueOf(query.createdFrom)); }
+        if (query.createdTo != null) { sql += " AND created_at<?"; args.add(Timestamp.valueOf(query.createdTo)); }
+        // Historical membership must use the frozen snapshot, even after today's route changes.
+        if (operationId != null) {
+            sql += " AND JSON_CONTAINS(route_snapshot_json,JSON_OBJECT('operationId',?),'$.steps')=1";
+            args.add(operationId);
+        }
+        args.add(query.pageSize + 1); args.add(query.offset());
+        List<Map<String,Object>> rows = jdbc.queryForList(sql + " ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", args.toArray());
+        Map<String,Object> result = query.result("orders", rows, "NO_WORK_ORDER", "mes_work_order（创建时工艺快照）");
+        List<Map<String,Object>> exposed = new ArrayList<>();
+        for (Map<String,Object> row : rows.subList(0, Math.min(query.pageSize, rows.size()))) exposed.add(expose(row));
+        result.put("orders", exposed);
         return result;
     }
 

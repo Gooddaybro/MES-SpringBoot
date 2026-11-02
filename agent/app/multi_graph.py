@@ -301,6 +301,7 @@ class CoordinatorState(TypedDict, total=False):
     request: MultiAgentRequest
     response: MultiAgentResponse
     deadline: float
+    dependency_ok: bool
 
 
 class MultiAgentWorkflow:
@@ -311,16 +312,68 @@ class MultiAgentWorkflow:
         builder = StateGraph(CoordinatorState)
         builder.add_node("dispatch_workers", self.dispatch_workers)
         builder.add_node("aggregate_results", self.aggregate_results)
-        builder.add_edge(START, "dispatch_workers")
+        builder.add_node("resolve_operation", self.resolve_operation)
+        builder.add_conditional_edges(
+            START,
+            lambda state: state["request"].queryMode,
+            {"independent": "dispatch_workers", "operation_chain": "resolve_operation"},
+        )
+        builder.add_conditional_edges(
+            "resolve_operation",
+            lambda state: "dispatch" if state.get("dependency_ok") else "stop",
+            {"dispatch": "dispatch_workers", "stop": "aggregate_results"},
+        )
         builder.add_edge("dispatch_workers", "aggregate_results")
         builder.add_edge("aggregate_results", END)
         self.graph = builder.compile()
 
     async def dispatch_workers(self, state: CoordinatorState):
+        roles = [
+            role for role in state["request"].requestedAgents
+            if role not in state["response"].executedAgents
+        ]
+        return await self._run_workers(state, roles)
+
+    async def resolve_operation(self, state: CoordinatorState):
+        await self._run_workers(state, ["operation"])
+        result = state["response"].agentResults[0]
+        if result.status != "SUCCESS":
+            return {"dependency_ok": False}
+        request = state["request"]
+        facts = {fact.tool: fact for fact in request.providedToolResults}
+        supplied = facts.get("get_operations")
+        operations = supplied.result.get("operations") if supplied else None
+        if (
+            not supplied or supplied.result.get("status") != "SUCCESS"
+            or not isinstance(operations, list) or len(operations) != 1
+            or supplied.result.get("hasMore", False)
+            or not isinstance(operations[0], dict)
+            or not isinstance(operations[0].get("id"), str)
+            or not operations[0]["id"].strip()
+        ):
+            result.status = "NEEDS_INPUT"
+            result.fallbackReason = "BUSINESS_NEEDS_INPUT"
+            result.answer = "尚未确定唯一工序，未执行关联物料、路线或工单查询，请提供完整工序编码。"
+            return {"dependency_ok": False}
+        operation_id = operations[0]["id"]
+        for role in request.requestedAgents:
+            if role == "operation":
+                continue
+            dependent = facts.get(ROLE_TOOLS[role])
+            if not dependent or dependent.parameters.get("operationId") != operation_id:
+                result.status = "TOOL_ERROR"
+                result.fallbackReason = "DEPENDENCY_MISMATCH"
+                result.answer = "关联事实与已确认工序标识不一致，已停止依赖步骤。"
+                return {"dependency_ok": False}
+        return {"dependency_ok": True}
+
+    async def _run_workers(self, state: CoordinatorState, roles: list[str]):
         request, response = state["request"], state["response"]
+        if not roles:
+            return {}
         jobs = {}
         initial_states = {}
-        for role in request.requestedAgents:
+        for role in roles:
             result = AgentResult(agentId=role, status="SUCCESS", answer="")
             initial = {
                 "question": request.question,
@@ -334,7 +387,7 @@ class MultiAgentWorkflow:
             jobs[role] = asyncio.create_task(self.workers[role].run(initial))
             response.handoffs.append(Handoff(from_="coordinator", to=role, status="SUCCESS"))
         response.agentExecuted = True
-        response.executedAgents = list(request.requestedAgents)
+        response.executedAgents.extend(roles)
         try:
             _, pending = await asyncio.wait(
                 jobs.values(), timeout=max(0, state["deadline"] - time.perf_counter())
@@ -423,7 +476,7 @@ class MultiAgentWorkflow:
                         "response": response,
                         "deadline": started + min(30, self.settings.request_timeout_seconds),
                     },
-                    config={"recursion_limit": 4},
+                    config={"recursion_limit": 6},
                 )
         response.elapsedMs = round((time.perf_counter() - started) * 1000)
         return response

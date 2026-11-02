@@ -26,11 +26,15 @@ public class ManufacturingController {
     private final MasterDataQueryService master;
     private final MaterialRoutingService routing;
     private final WorkOrderService orders;
+    private final OperationImpactService impact;
+    private final RoutingComparisonService comparison;
 
-    public ManufacturingController(MasterDataQueryService master, MaterialRoutingService routing, WorkOrderService orders) {
+    public ManufacturingController(MasterDataQueryService master, MaterialRoutingService routing, WorkOrderService orders,
+                                   OperationImpactService impact, RoutingComparisonService comparison) {
         this.master = master;
         this.routing = routing;
         this.orders = orders;
+        this.impact = impact; this.comparison = comparison;
     }
 
     @GetMapping({"", "/"})
@@ -63,6 +67,40 @@ public class ManufacturingController {
     public ResponseEntity<Result<Map<String,Object>>> orders(@RequestParam(required = false) String workOrderCode,
                                                             @RequestParam(required = false) String materialCode) {
         return run("workorder:read", () -> orders.query(workOrderCode, materialCode));
+    }
+
+    @GetMapping("/materials/search") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> searchMaterials(@RequestParam Map<String,String> parameters) {
+        return run("material:read", () -> master.searchMaterials(filters(parameters,"materialCode","materialName","materialStatus"),null));
+    }
+    @GetMapping("/operations/search") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> searchOperations(@RequestParam Map<String,String> parameters) {
+        return run("operation:read", () -> master.searchOperations(filters(parameters,"operationCode","operationName","materialCode")));
+    }
+    @GetMapping("/routings/search") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> searchRoutings(@RequestParam Map<String,String> parameters) {
+        return run("routing:read", () -> master.searchRoutings(filters(parameters,"materialCode"),null));
+    }
+    @GetMapping("/orders/search") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> searchOrders(@RequestParam Map<String,String> parameters) {
+        return run("workorder:read", () -> orders.search(filters(parameters,"workOrderCode","materialCode","state","createdFrom","createdTo"),null));
+    }
+    @GetMapping("/operation-impact") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> operationImpact(@RequestParam Map<String,String> parameters) {
+        return run("operation:read", () -> impact.query(BusinessQuery.from(parameters),SecurityUtils.getSubject()));
+    }
+    @GetMapping("/orders/compare-routing") @ResponseBody
+    public ResponseEntity<Result<Map<String,Object>>> compareRouting(@RequestParam Map<String,String> parameters) {
+        return run("workorder:read", () -> {
+            BusinessQuery query=filters(parameters,"workOrderCode");
+            return comparison.compare(query.workOrderCode,SecurityUtils.getSubject());
+        });
+    }
+
+    private BusinessQuery filters(Map<String,String> parameters,String... fields) {
+        Set<String> allowed=new HashSet<>(Arrays.asList(fields)); allowed.add("page"); allowed.add("pageSize");
+        if(!allowed.containsAll(parameters.keySet())) throw new BusinessException("INVALID_INPUT","该查询含有不支持的字段。");
+        return BusinessQuery.from(parameters);
     }
 
     @PostMapping(value = "/orders", consumes = MediaType.APPLICATION_JSON_VALUE) @ResponseBody
@@ -140,7 +178,7 @@ public class ManufacturingController {
             case "AUTH_REQUIRED": status = HttpStatus.UNAUTHORIZED; break;
             case "FORBIDDEN": status = HttpStatus.FORBIDDEN; break;
             case "INVALID_INPUT": status = HttpStatus.BAD_REQUEST; break;
-            case "CONFLICT": status = HttpStatus.CONFLICT; break;
+            case "CONFLICT": case "SNAPSHOT_UNRELIABLE": case "MATERIAL_IDENTITY_CHANGED": status = HttpStatus.CONFLICT; break;
             case "DATA_UNAVAILABLE": status = HttpStatus.SERVICE_UNAVAILABLE; break;
             case "TIMEOUT": status = HttpStatus.GATEWAY_TIMEOUT; break;
             case "ERROR": status = HttpStatus.INTERNAL_SERVER_ERROR; break;

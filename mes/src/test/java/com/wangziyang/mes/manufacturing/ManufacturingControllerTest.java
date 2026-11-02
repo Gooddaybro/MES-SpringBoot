@@ -24,6 +24,8 @@ public class ManufacturingControllerTest {
     private MasterDataQueryService master;
     private MaterialRoutingService routing;
     private WorkOrderService orders;
+    private OperationImpactService impact;
+    private RoutingComparisonService comparison;
     private Subject subject;
     private MockMvc mvc;
 
@@ -31,12 +33,13 @@ public class ManufacturingControllerTest {
         master = mock(MasterDataQueryService.class);
         routing = mock(MaterialRoutingService.class);
         orders = mock(WorkOrderService.class);
+        impact = mock(OperationImpactService.class); comparison = mock(RoutingComparisonService.class);
         subject = mock(Subject.class);
         when(subject.isAuthenticated()).thenReturn(true);
         when(subject.isPermitted(anyString())).thenReturn(true);
         when(subject.getPrincipal()).thenReturn("learner");
         ThreadContext.bind(subject);
-        mvc = MockMvcBuilders.standaloneSetup(new ManufacturingController(master, routing, orders))
+        mvc = MockMvcBuilders.standaloneSetup(new ManufacturingController(master, routing, orders, impact, comparison))
                 .setControllerAdvice(new ExceptionAdvice()).build();
     }
     @After public void clearSubject() { ThreadContext.remove(); }
@@ -128,5 +131,24 @@ public class ManufacturingControllerTest {
         mvc.perform(get("/admin/manufacturing/operations").param("operationCode", "OP-10").param("materialCode", "MAT-001"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.answer").value("真实工序"));
         verify(master).operations("OP-10", "MAT-001");
+    }
+
+    @Test public void searchFiltersAndSnapshotComparisonHaveExplicitReadOnlyEndpoints() throws Exception {
+        when(master.searchMaterials(any(),isNull())).thenReturn(row("status","SUCCESS","materials",java.util.Collections.emptyList(),"answer","查询结果"));
+        mvc.perform(get("/admin/manufacturing/materials/search").param("materialName","控制器").param("materialStatus","2").param("pageSize","5"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("SUCCESS"));
+        verify(master).searchMaterials(argThat(q -> "控制器".equals(q.materialName) && "2".equals(q.materialStatus) && q.pageSize==5),isNull());
+        when(comparison.compare("WO-001",subject)).thenReturn(row("status","SUCCESS","hasChanges",false,"answer","相同"));
+        mvc.perform(get("/admin/manufacturing/orders/compare-routing").param("workOrderCode","WO-001"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.hasChanges").value(false));
+        verify(orders,never()).create(any(),any(),any(),any()); verify(orders,never()).transition(any(),any(),any());
+    }
+
+    @Test public void searchRejectsUnknownOrInvalidFieldsAndDeniedDomainsWithoutReadingData() throws Exception {
+        mvc.perform(get("/admin/manufacturing/orders/search").param("pageSize","10000")).andExpect(status().isBadRequest());
+        mvc.perform(get("/admin/manufacturing/materials/search").param("sql","SELECT 1")).andExpect(status().isBadRequest());
+        when(subject.isPermitted("mes:assistant:workorder:read")).thenReturn(false);
+        mvc.perform(get("/admin/manufacturing/orders/search")).andExpect(status().isForbidden());
+        verifyZeroInteractions(master,orders);
     }
 }

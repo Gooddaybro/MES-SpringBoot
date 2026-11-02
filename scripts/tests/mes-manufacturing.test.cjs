@@ -21,8 +21,10 @@ function setup() {
   const root = new Element(), results = {}, forms = {}, requests = [];
   root.setAttribute('data-api', '/admin/manufacturing');
   for (const [id, endpoint, method, fields] of [
-    ['material', '/material', 'GET', ['materialCode']], ['operations', '/operations', 'GET', ['operationCode', 'materialCode']],
-    ['routing', '/routing', 'GET', ['materialCode']], ['orders', '/orders', 'GET', ['workOrderCode', 'materialCode']],
+    ['material', '/materials/search', 'GET', ['materialCode', 'materialName', 'materialStatus', 'page', 'pageSize']], ['operations', '/operations/search', 'GET', ['operationCode', 'operationName', 'materialCode', 'page', 'pageSize']],
+    ['routing', '/routing', 'GET', ['materialCode']], ['orders', '/orders/search', 'GET', ['workOrderCode', 'materialCode', 'state', 'createdFrom', 'createdTo', 'page', 'pageSize']],
+    ['impact', '/operation-impact', 'GET', ['operationCode', 'operationName', 'state', 'page', 'pageSize']],
+    ['comparison', '/orders/compare-routing', 'GET', ['workOrderCode']],
     ['create', '/orders', 'POST', ['orderCode', 'materialCode', 'quantity']],
     ['transition', '/orders/transition', 'POST', ['orderCode', 'action']]
   ]) {
@@ -47,7 +49,7 @@ function setup() {
 test('read forms send bounded query context without creating or transitioning an order', () => {
   const app = setup(); app.forms.operations.fields.materialCode.value = 'MAT-1'; app.forms.operations.emit('submit');
   assert.equal(app.requests.length, 1); assert.equal(app.requests[0].options.type, 'GET');
-  assert.equal(app.requests[0].options.url, '/admin/manufacturing/operations');
+  assert.equal(app.requests[0].options.url, '/admin/manufacturing/operations/search');
   assert.equal(app.requests[0].options.data.materialCode, 'MAT-1');
   assert.equal(app.requests[0].options.data.operationCode, undefined);
   app.requests[0].resolve({ code: 0, data: { status: 'SUCCESS', operations: [{ code: 'OP-1', name: '加工' }] } });
@@ -80,4 +82,27 @@ test('result text and permission failures are safe, readable, and allow retry', 
   assert.ok(app.results.material.textContent.includes(attack));
   app.forms.material.emit('submit'); app.requests[1].reject(403);
   assert.ok(app.results.material.textContent.includes('权限')); assert.equal(app.forms.material.button.disabled, false);
+});
+
+test('search and dependency forms only submit filters and never trigger writes', () => {
+  const app = setup(), form = app.forms.impact;
+  form.fields.operationName.value = '老化测试'; form.fields.state.value = 'CREATED'; form.fields.page.value = '2';
+  form.emit('submit');
+  assert.equal(app.requests.length, 1); assert.equal(app.requests[0].options.type, 'GET');
+  assert.equal(app.requests[0].options.data.operationName, '老化测试');
+  assert.equal(app.requests[0].options.data.page, '2');
+});
+
+test('snapshot changes show before and after with readable labels and escaped database names', () => {
+  const app = setup(), attack = '<img src=x onerror=alert(1)>';
+  app.forms.comparison.fields.workOrderCode.value = 'WO-1'; app.forms.comparison.emit('submit');
+  app.requests[0].resolve({ code: 0, data: { status: 'SUCCESS', comparisonAvailable: true, workOrderCode: 'WO-1',
+    materialCode: 'MAT-1', workOrderState: 'CREATED', hasChanges: true,
+    snapshotSteps: [{ code: 'OP-1', name: '装配', order: 1 }], currentSteps: [{ code: 'OP-2', name: attack, order: 1 }],
+    changes: [{ type: 'ADDED', after: { code: 'OP-2', name: attack, order: 1 }, before: null }],
+    limitations: ['历史快照没有温度参数，无法比较。'], impactAssessment: '需要工艺人员确认。' } });
+  const text = app.results.comparison.textContent;
+  assert.ok(text.includes('工单快照') && text.includes('当前关联路线') && text.includes('工序新增'));
+  assert.ok(text.includes(attack) && text.includes('无法比较'));
+  assert.equal(app.requests.length, 1);
 });

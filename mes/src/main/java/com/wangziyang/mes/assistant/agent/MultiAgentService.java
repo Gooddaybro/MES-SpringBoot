@@ -11,6 +11,9 @@ import com.wangziyang.mes.assistant.service.MaterialRoutingService;
 import com.wangziyang.mes.manufacturing.BusinessException;
 import com.wangziyang.mes.manufacturing.MasterDataQueryService;
 import com.wangziyang.mes.manufacturing.WorkOrderService;
+import com.wangziyang.mes.manufacturing.BusinessQuery;
+import com.wangziyang.mes.manufacturing.OperationImpactService;
+import com.wangziyang.mes.manufacturing.RoutingComparisonService;
 import com.wangziyang.mes.system.entity.SysUser;
 import org.apache.shiro.subject.Subject;
 import org.springframework.http.HttpMethod;
@@ -55,13 +58,17 @@ public class MultiAgentService {
     private final MasterDataQueryService master;
     private final MaterialRoutingService routing;
     private final WorkOrderService orders;
+    private final OperationImpactService impact;
+    private final RoutingComparisonService comparison;
     private final RestTemplate http;
     private final String subjectSalt = UUID.randomUUID().toString();
     private final JsonFactory strictJson = new JsonFactory().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
 
     public MultiAgentService(PythonAgentProperties properties, ObjectMapper mapper, MasterDataQueryService master,
-                             MaterialRoutingService routing, WorkOrderService orders) {
+                             MaterialRoutingService routing, WorkOrderService orders, OperationImpactService impact,
+                             RoutingComparisonService comparison) {
         this.properties = properties; this.mapper = mapper.copy(); this.master = master; this.routing = routing; this.orders = orders;
+        this.impact = impact; this.comparison = comparison;
         http = new RestTemplate(requestFactory(properties));
         http.setErrorHandler(new ResponseErrorHandler() {
             @Override public boolean hasError(ClientHttpResponse response) { return false; }
@@ -71,15 +78,49 @@ public class MultiAgentService {
 
     public Map<String, Object> chat(String question, String conversationId, Subject subject,
                                    String materialCode, String operationCode, String workOrderCode) {
+        return chat(question,conversationId,subject,materialCode,operationCode,workOrderCode,Collections.emptyMap());
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> chat(String question, String conversationId, Subject subject,
+                                   String materialCode, String operationCode, String workOrderCode, Map<String,String> extraFilters) {
         if (subject == null || !subject.isAuthenticated()) return response("AUTH_REQUIRED", "请先登录后使用助手。");
         if (question == null || question.trim().isEmpty() || question.length() > 1000 || hasControl(question)
                 || !PythonAgentService.validConversationId(conversationId))
             return response("INVALID_INPUT", "请提供1至1000字的问题和有效会话标识。");
-        List<String> requested = requestedRoles(question);
-        if (requested.isEmpty()) return response("UNSUPPORTED", "多 Agent 支持查询物料、工序、工艺路线、工单；输入“综合查询”可查询四项。可在补充条件中填写各业务编码，工单写入请使用业务工作台。");
+        if(requestedRoles(question).isEmpty()) return response("UNSUPPORTED","多 Agent 支持查询物料、工序、工艺路线、工单；输入“综合查询”可查询四项。工单写入请使用业务工作台。");
+        BusinessQuestion parsed;
         Inputs input;
-        try { input = inputs(question, requested, materialCode, operationCode, workOrderCode); }
+        BusinessQuery query;
+        List<String> requested;
+        try {
+            Map<String,String> suppliedFilters=new LinkedHashMap<>(extraFilters);
+            if(materialCode!=null) suppliedFilters.put("materialCode",materialCode);
+            if(operationCode!=null) suppliedFilters.put("operationCode",operationCode);
+            if(workOrderCode!=null) suppliedFilters.put("workOrderCode",workOrderCode);
+            parsed=BusinessQuestion.parse(question,suppliedFilters);
+            requested="operation_chain".equals(parsed.mode) ? new ArrayList<>(ROLES)
+                    : "route_compare".equals(parsed.mode) ? Collections.singletonList("workorder") : requestedRoles(question);
+            input = inputs(parsed.codeQuestion, requested, materialCode, operationCode, workOrderCode);
+            Map<String,String> filters=new LinkedHashMap<>(parsed.query.parameters());
+            if(input.material!=null) filters.put("materialCode",input.material);
+            if(input.operation!=null) filters.put("operationCode",input.operation);
+            if(input.order!=null) filters.put("workOrderCode",input.order);
+            // Inline identifiers and explicit fields must choose the same dependency path.
+            parsed=BusinessQuestion.parse(question,filters);
+            requested="operation_chain".equals(parsed.mode) ? new ArrayList<>(ROLES)
+                    : "route_compare".equals(parsed.mode) ? Collections.singletonList("workorder") : requestedRoles(question);
+            query=parsed.query;
+        }
+        catch (BusinessException invalid) { return response(invalid.getStatus(),invalid.getMessage()); }
         catch (IllegalArgumentException invalid) { return response("INVALID_INPUT", "请使用完整有效的编码，每类业务只提供一个编码，问题中的编码须与补充条件一致。"); }
+        if (requested.isEmpty()) return response("UNSUPPORTED", "多 Agent 支持查询物料、工序、工艺路线、工单；输入“综合查询”可查询四项。工单写入请使用业务工作台。");
+        boolean chain="operation_chain".equals(parsed.mode), compare="route_compare".equals(parsed.mode);
+        if(chain || compare) {
+            List<String> permissions=chain ? ROLES : Arrays.asList("workorder","routing");
+            for(String role:permissions) if(!subject.isPermitted("mes:assistant:"+role+":read"))
+                return response("FORBIDDEN","当前账号缺少本次跨模块查询所需的读取权限。");
+        }
 
         List<String> allowed = new ArrayList<>();
         Map<String, Object> facts = new LinkedHashMap<>();
@@ -88,14 +129,28 @@ public class MultiAgentService {
             if (subject.isPermitted("mes:assistant:" + role + ":read")) allowed.add(role);
             else facts.put(role, business("FORBIDDEN", "当前账号没有此业务的查询权限。"));
         }
+        Map<String,Object> associated=Collections.emptyMap();
+        String operationId=null;
+        if(chain) {
+            try {
+                Map<String,Object> resolved=impact.query(query,subject);
+                Object supplied=resolved.get("businessResults");
+                associated=supplied instanceof Map ? (Map<String,Object>)supplied : Collections.emptyMap();
+                operationId=resolved.get("operationId") instanceof String ? (String)resolved.get("operationId") : null;
+                if(associated.isEmpty()) for(String role:allowed) facts.put(role,business(String.valueOf(resolved.get("status")),String.valueOf(resolved.get("answer"))));
+            } catch(Exception failed) { for(String role:allowed) facts.put(role,AssistantResponses.queryFailure(failed)); }
+        }
         for (String role : allowed) {
             Map<String, Object> result;
             try {
-                switch (role) {
-                    case "material": result = master.material(input.material); break;
-                    case "operation": result = master.operations(input.operation, input.material); break;
-                    case "routing": result = input.material == null ? business("NEEDS_INPUT", "查询工艺路线需要物料编码，请在问题或补充条件中填写。") : routing.query(input.material); break;
-                    case "workorder": result = orders.query(input.order, input.material); break;
+                if(chain) result=(Map<String,Object>)associated.getOrDefault(role,facts.getOrDefault(role,business("NEEDS_INPUT","尚未确定唯一工序，未执行关联查询。")));
+                else if(query.materialName!=null && !"material".equals(role))
+                    result=business("NEEDS_INPUT","物料名称尚未明确选择为唯一编码；请先查看物料候选，再使用编码并清除名称条件查询关联业务。");
+                else switch (role) {
+                    case "material": result = parsed.search ? master.searchMaterials(query,null) : master.material(input.material); break;
+                    case "operation": result = parsed.search ? master.searchOperations(query) : master.operations(input.operation, input.material); break;
+                    case "routing": result = input.material == null ? business("NEEDS_INPUT", "查询工艺路线需要唯一物料编码；名称搜索返回候选后请明确选择，不会自动选取首条。") : routing.query(input.material); break;
+                    case "workorder": result = compare ? comparison.compare(input.order,subject) : parsed.search ? orders.search(query,null) : orders.query(input.order, input.material); break;
                     default: throw new IllegalStateException();
                 }
                 if (result == null) result = business("TOOL_ERROR", "业务查询未返回可靠结果。");
@@ -112,13 +167,17 @@ public class MultiAgentService {
             List<String> tools = new ArrayList<>(); for (String role : allowed) tools.add(tool(role));
             long now = Instant.now().getEpochSecond();
             ObjectNode body = mapper.createObjectNode(); body.put("requestId", requestId); body.put("question", question); body.putArray("messages");
+            if(chain) body.put("queryMode","operation_chain");
             body.set("requestedAgents", mapper.valueToTree(allowed));
             ObjectNode acl = body.putObject("authorizedContext"); acl.put("subject", opaqueSubject(subject)); acl.putArray("scopes");
             acl.set("allowedTools", mapper.valueToTree(tools)); acl.put("issuedAt", now); acl.put("expiresAt", now + 60);
             body.putArray("providedToolResults");
             for (String role : allowed) {
                 ObjectNode supplied = body.withArray("providedToolResults").addObject(); supplied.put("tool", tool(role));
-                supplied.set("parameters", mapper.valueToTree(parameters(role, input))); supplied.set("result", mapper.valueToTree(modelFacts(immutableFacts.get(role))));
+                Map<String,Object> toolParameters=new LinkedHashMap<>(parameters(role,input));
+                if(parsed.search || chain) toolParameters.putAll(query.parameters());
+                if(chain && operationId!=null) toolParameters.put("operationId",operationId);
+                supplied.set("parameters", mapper.valueToTree(toolParameters)); supplied.set("result", mapper.valueToTree(modelFacts(immutableFacts.get(role))));
             }
             byte[] bytes = mapper.writeValueAsBytes(body);
             if (bytes.length > MAX_BYTES) return fallback(requestId, requested, immutableFacts, null, "CONTEXT_TOO_LARGE");
@@ -210,7 +269,7 @@ public class MultiAgentService {
     }
     private static Map<String, Object> business(String status, String answer) { Map<String, Object> value = new LinkedHashMap<>(); value.put("status", status); value.put("answer", answer); return value; }
     private static List<String> requestedRoles(String question) {
-        String value = question.toLowerCase(Locale.ROOT); if (value.contains("综合") || value.contains("全部") || value.contains("四个业务")) return new ArrayList<>(ROLES);
+        String value = question.toLowerCase(Locale.ROOT); if (BusinessQuestion.comprehensive(question)) return new ArrayList<>(ROLES);
         List<String> result = new ArrayList<>();
         if (value.contains("物料") || value.contains("material")) result.add("material");
         if (value.contains("工序") || value.contains("operation")) result.add("operation");

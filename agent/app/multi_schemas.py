@@ -88,6 +88,7 @@ class MultiAgentRequest(StrictModel):
     question: str = Field(min_length=1, max_length=1000)
     messages: list[UserMessage] = Field(default_factory=list, max_length=4)
     requestedAgents: list[AgentId] = Field(min_length=1, max_length=4)
+    queryMode: Literal["independent", "operation_chain"] = "independent"
     authorizedContext: AuthorizedContext
     providedToolResults: list[ProvidedToolResult] = Field(default_factory=list, max_length=4)
 
@@ -105,6 +106,8 @@ class MultiAgentRequest(StrictModel):
         supplied = [item.tool for item in self.providedToolResults]
         if len(set(agents)) != len(agents) or len(set(supplied)) != len(supplied):
             raise ValueError("Duplicate role or supplied tool")
+        if self.queryMode == "operation_chain" and "operation" not in agents:
+            raise ValueError("Operation dependency requires the operation role")
         if set(allowed) != {ROLE_TOOLS[role] for role in agents} or not set(supplied) <= set(
             allowed
         ):

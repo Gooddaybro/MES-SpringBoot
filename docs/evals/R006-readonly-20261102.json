@@ -1,0 +1,182 @@
+{
+  "date": "2026-11-02",
+  "timezone": "Asia/Shanghai",
+  "stage": "R006 第一批：只读",
+  "branch": "agent",
+  "baseCommit": "75f9b49cf719dffd7882e0fce3e7b3a7bafb9588",
+  "baseline": {
+    "java": 182,
+    "python": 135,
+    "node": 20
+  },
+  "tests": {
+    "javaDefaultPackage": {
+      "passed": 221,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "newDatabaseIT": {
+      "passed": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "realSignedHttpIT": {
+      "passed": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "originalWorkOrderIT": {
+      "passed": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "originalPagesRealmIT": {
+      "passed": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "python": {
+      "passed": 142,
+      "providerCalls": 0,
+      "evidence": "本轮完整pytest执行输出"
+    },
+    "ruff": {
+      "passed": true,
+      "cwd": "agent"
+    },
+    "node": {
+      "passed": 24,
+      "syntaxChecks": 2
+    }
+  },
+  "databaseChecks": {
+    "3307/mes_study": {
+      "material": 1,
+      "operation": 0,
+      "routing": 0,
+      "relation": 0,
+      "workOrder": 0,
+      "bom": 0,
+      "bomItem": 0,
+      "writes": false,
+      "flywayVersions": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    "3308/mes_study": {
+      "kind": "既有教学样例学习库，非生产",
+      "tables": {
+        "sp_materile": {
+          "count": 8,
+          "sha256": "bca887a40bf53e22374033ca614890c1133f9085da032f2204922f28f1b7ccac",
+          "schemaSha256": "3a4ac28324ce9ac2b3da595caca659b5b823ab2feea388b4ab0996fdfd8c2d76"
+        },
+        "sp_oper": {
+          "count": 15,
+          "sha256": "d8e0559d597f38cfd6ac69cfdeee77a44dae186ad93ee11c8f349dbc4919c01f",
+          "schemaSha256": "96a3980412ed7d9040137d7eedbc64e61adc9cde10206fe7b0b8f57cfe47622e"
+        },
+        "sp_flow": {
+          "count": 8,
+          "sha256": "ee99a7c73c07b7869b5dc9218d3145a3d367ae1a0ba0068375e54d9b7a86f48c",
+          "schemaSha256": "654ba46f969f40fef588fba6c1773e83f202c90eac1717f6fd7a2cc731088900"
+        },
+        "sp_flow_oper_relation": {
+          "count": 36,
+          "sha256": "6ca0d2f51d2b5c99b5fd297b40f2732433fca09a74577aa2cb351cc4e024522e",
+          "schemaSha256": "fdde4e5598d5fa9d5785e518b050fc23ac30294f843b04a39248de912ff23569"
+        },
+        "mes_work_order": {
+          "count": 1,
+          "sha256": "8a94ca7860a4bdfe1f2c23ce1a123c9437df5cd9326bb652310e2649b7269816",
+          "schemaSha256": "d24ef78f133175f9a7a04fb2ded6453662d8582e978943f293a5a681aa917396"
+        }
+      },
+      "dataAndSchemaUnchanged": true
+    }
+  },
+  "realSignedHttp": {
+    "realm": "真实既有学习账号",
+    "mvcEntry": "MockMvc模拟，非浏览器/验证码",
+    "python": "真实FastAPI/MultiAgentWorkflow，127.0.0.1:8002",
+    "llmConfigured": false,
+    "modelCalls": 0,
+    "newKnowledgeIndex": false,
+    "actualMaterial": "SERVO-DEMO-CTRL-001",
+    "actualOperation": "SERVO-DEMO-OP50",
+    "actualOrder": "WO-SERVO-DEMO-001",
+    "orderState": "CREATED",
+    "snapshotStepCount": 6,
+    "missingOperationQuery": "老化测试 → NO_OPERATION，仅工序子图执行"
+  },
+  "schemaChanges": {
+    "tables": 0,
+    "columns": 0,
+    "migrations": 0
+  },
+  "review": "独立审查发现的问题已修复并回归；最终复核无遗留已报问题",
+  "notImplementedOrNotVerified": [
+    "HITL建单",
+    "确认凭据/重复确认/确认时并发再校验",
+    "批量写入",
+    "物料/工序与真实SOP绑定",
+    "发布版本及生产参数对比",
+    "生产部署/负载",
+    "浏览器新功能交互",
+    "多租户行级隔离"
+  ],
+  "preservedPreExistingFiles": [
+    "agent/README.md",
+    "docs/AI助手交付报告.md",
+    "docs/AI助手接入与运行指南.md",
+    "docs/MES_REFACTOR_JOURNAL.md",
+    "docs/R005-多Agent与四业务验收.md",
+    "mes/src/main/resources/application-dev.yml"
+  ],
+  "changedFiles": [
+    "README.md",
+    "agent/app/multi_graph.py",
+    "agent/app/multi_schemas.py",
+    "agent/tests/run_readonly_smoke_server.py",
+    "agent/tests/test_operation_chain.py",
+    "docs/MES_REFACTOR_JOURNAL.md",
+    "docs/R006-后续业务闭环规划.md",
+    "docs/R006-独立HTTP测试.md",
+    "docs/R006-能力盘点与第一批验收.md",
+    "docs/evals/R006-readonly-20261102.json",
+    "docs/superpowers/plans/2026-11-02-mes-r006-readonly.md",
+    "docs/superpowers/specs/2026-11-02-mes-r006-readonly-design.md",
+    "mes/src/main/java/com/wangziyang/mes/assistant/agent/BusinessQuestion.java",
+    "mes/src/main/java/com/wangziyang/mes/assistant/agent/MultiAgentService.java",
+    "mes/src/main/java/com/wangziyang/mes/assistant/controller/MultiAgentController.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/BusinessQuery.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/ManufacturingController.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/MasterDataQueryService.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/OperationImpactService.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/RoutingComparisonService.java",
+    "mes/src/main/java/com/wangziyang/mes/manufacturing/WorkOrderService.java",
+    "mes/src/main/resources/static/js/mes-assistant.js",
+    "mes/src/main/resources/static/js/mes-manufacturing.js",
+    "mes/src/main/resources/templates/admin/assistant/manufacturing.ftl",
+    "mes/src/main/resources/templates/admin/assistant/widget.ftl",
+    "mes/src/test/java/com/wangziyang/mes/assistant/agent/BusinessQuestionTest.java",
+    "mes/src/test/java/com/wangziyang/mes/assistant/agent/MultiAgentServiceTest.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/BusinessQueryTest.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/BusinessSearchServiceTest.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/ManufacturingControllerTest.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/OperationImpactServiceTest.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/ReadOnlyAgentDatabaseIT.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/ReadOnlyBusinessDatabaseIT.java",
+    "mes/src/test/java/com/wangziyang/mes/manufacturing/RoutingComparisonServiceTest.java",
+    "scripts/tests/mes-assistant.test.cjs",
+    "scripts/tests/mes-manufacturing.test.cjs"
+  ]
+}

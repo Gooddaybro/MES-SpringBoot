@@ -8,6 +8,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.wangziyang.mes.assistant.service.MaterialRoutingService;
 import com.wangziyang.mes.manufacturing.MasterDataQueryService;
 import com.wangziyang.mes.manufacturing.WorkOrderService;
+import com.wangziyang.mes.manufacturing.OperationImpactService;
+import com.wangziyang.mes.manufacturing.RoutingComparisonService;
 import org.apache.shiro.subject.Subject;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +38,8 @@ public class MultiAgentServiceTest {
     private MasterDataQueryService master;
     private MaterialRoutingService routing;
     private WorkOrderService orders;
+    private OperationImpactService impact;
+    private RoutingComparisonService comparison;
     private Subject subject;
     private HttpServer server;
     private String baseUrl;
@@ -49,6 +53,7 @@ public class MultiAgentServiceTest {
 
     @Before public void setUp() throws Exception {
         master = mock(MasterDataQueryService.class); routing = mock(MaterialRoutingService.class); orders = mock(WorkOrderService.class);
+        impact = mock(OperationImpactService.class); comparison = mock(RoutingComparisonService.class);
         subject = mock(Subject.class); when(subject.isAuthenticated()).thenReturn(true);
         when(subject.getPrincipal()).thenReturn("private-user"); when(subject.isPermitted(anyString())).thenReturn(true);
         when(master.material(any())).thenReturn(fact("真实物料")); when(master.operations(any(), any())).thenReturn(fact("真实工序"));
@@ -184,7 +189,73 @@ public class MultiAgentServiceTest {
     private MultiAgentService service(boolean enabled) {
         MockEnvironment env = new MockEnvironment().withProperty("MES_AGENT_ENABLED", String.valueOf(enabled))
             .withProperty("MES_AGENT_BASE_URL", baseUrl).withProperty("MES_AGENT_SHARED_SECRET", SECRET);
-        return new MultiAgentService(new PythonAgentProperties(env), mapper, master, routing, orders);
+        return new MultiAgentService(new PythonAgentProperties(env), mapper, master, routing, orders, impact, comparison);
+    }
+
+    @Test public void operationChainSignsTheModeAndActualDependencyIdentity() throws Exception {
+        Map<String,Object> facts=new LinkedHashMap<>();
+        for(String role:Arrays.asList("material","operation","routing","workorder")) facts.put(role,fact("关联"+role));
+        Map<String,Object> resolved=fact("已解析"); resolved.put("businessResults",facts); resolved.put("operationId","actual-op");
+        when(impact.query(any(),eq(subject))).thenReturn(resolved);
+        Map<String,Object> result=ask(service(true),"查询包含老化测试工序的物料及相关工单",null,null,null);
+        assertEquals(true,result.get("agentExecuted"));
+        JsonNode body=mapper.readTree(rawBody); assertEquals("operation_chain",body.path("queryMode").asText());
+        for(JsonNode supplied:body.path("providedToolResults")) assertEquals("actual-op",supplied.path("parameters").path("operationId").asText());
+        verify(impact).query(argThat(q -> "老化测试".equals(q.operationName)),eq(subject));
+        verifyZeroInteractions(master,routing,orders);
+    }
+
+    @Test public void comparisonAndCrossModulePermissionsAreCheckedBeforeAnyFactIsRead() {
+        when(subject.isPermitted("mes:assistant:routing:read")).thenReturn(false);
+        assertEquals("FORBIDDEN",ask(service(true),"对比工单 WO-1 的工艺和当前工艺",null,null,null).get("status"));
+        assertEquals("FORBIDDEN",ask(service(true),"查询包含老化测试工序的物料及相关工单",null,null,null).get("status"));
+        verifyZeroInteractions(master,routing,orders,impact,comparison); assertEquals(0,requests.get());
+    }
+
+    @Test public void nameSearchUsesBoundedSearchAndDoesNotPickTheFirstMaterialForRouting() {
+        when(master.searchMaterials(any(),isNull())).thenReturn(fact("物料候选"));
+        Map<String,Object> result=service(true).chat("查询物料“Servo控制器”",UUID.randomUUID().toString(),subject,null,null,null,Collections.emptyMap());
+        assertEquals(true,result.get("agentExecuted"));
+        verify(master).searchMaterials(argThat(q -> "Servo控制器".equals(q.materialName) && q.materialCode==null),isNull());
+        verifyZeroInteractions(routing,orders,impact,comparison);
+    }
+
+    @Test public void aMaterialNameDoesNotTurnAnAssociatedOrderQuestionIntoAnUnfilteredOrderList() {
+        when(master.searchMaterials(any(),isNull())).thenReturn(fact("多个物料候选"));
+        Map<String,Object> result=ask(service(false),"查询物料“伺服”及其工单和工序",null,null,null);
+        Map<?,?> facts=(Map<?,?>)result.get("businessResults");
+        assertEquals("NEEDS_INPUT",((Map<?,?>)facts.get("workorder")).get("status"));
+        assertEquals("NEEDS_INPUT",((Map<?,?>)facts.get("operation")).get("status"));
+        verifyZeroInteractions(orders,routing,impact,comparison);
+        verify(master,never()).searchOperations(any());
+    }
+
+    @Test public void theSeparateOperationCodeFieldParticipatesInDependencyRouting() {
+        Map<String,Object> resolved=fact("没有工序"); resolved.put("status","NO_OPERATION");
+        when(impact.query(any(),eq(subject))).thenReturn(resolved);
+        ask(service(false),"查询工单",null,"AGE-1",null);
+        verify(impact).query(argThat(q -> "AGE-1".equals(q.operationCode)),eq(subject));
+        verifyZeroInteractions(orders,master,routing);
+    }
+
+    @Test public void anInlineOperationCodeAlsoParticipatesInDependencyRouting() {
+        Map<String,Object> resolved=fact("没有工序"); resolved.put("status","NO_OPERATION");
+        when(impact.query(any(),eq(subject))).thenReturn(resolved);
+        ask(service(false),"查询工序 AGE-1 的工单",null,null,null);
+        verify(impact).query(argThat(q -> "AGE-1".equals(q.operationCode)),eq(subject));
+        verifyZeroInteractions(orders,master,routing);
+    }
+
+    @Test public void comprehensiveSynonymsPreserveIndependentQueriesAndAllOrdersOnlyMeansOrders() {
+        for(String word:Arrays.asList("综合","全部","四个业务"))
+            ask(service(false),word+"查询物料MAT-1工单WO-1","MAT-1","OP-1","WO-1");
+        verifyZeroInteractions(impact);
+        verify(master,times(3)).material("MAT-1"); verify(orders,times(3)).query("WO-1","MAT-1");
+        reset(master,routing,orders);
+        when(orders.search(any(),isNull())).thenReturn(fact("筛选工单"));
+        Map<String,Object> result=ask(service(false),"查询全部已创建工单",null,null,null);
+        assertEquals(Collections.singleton("workorder"),((Map<?,?>)result.get("businessResults")).keySet());
+        verifyZeroInteractions(master,routing);
     }
     private Map<String, Object> ask(MultiAgentService service, String question, String material, String operation, String order) {
         return service.chat(question, UUID.randomUUID().toString(), subject, material, operation, order);

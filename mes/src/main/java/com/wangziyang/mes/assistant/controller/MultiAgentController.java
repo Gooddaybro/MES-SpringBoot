@@ -3,6 +3,7 @@ package com.wangziyang.mes.assistant.controller;
 import com.wangziyang.mes.assistant.AssistantResponses;
 import com.wangziyang.mes.assistant.agent.MultiAgentService;
 import com.wangziyang.mes.common.Result;
+import com.wangziyang.mes.manufacturing.BusinessException;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Arrays;
+import java.util.HashSet;
 
 @RestController
 @RequestMapping("/admin/assistant/multi")
@@ -25,14 +28,23 @@ public class MultiAgentController {
     @PostMapping("/chat")
     public ResponseEntity<Result<Map<String, Object>>> chat(@RequestParam(required = false) String message,
             @RequestParam(required = false) String conversationId, @RequestParam(required = false) String materialCode,
-            @RequestParam(required = false) String operationCode, @RequestParam(required = false) String workOrderCode) {
+            @RequestParam(required = false) String operationCode, @RequestParam(required = false) String workOrderCode,
+            @RequestParam Map<String,String> parameters) {
         long started = System.nanoTime(); Map<String, Object> data;
         try {
             Subject subject = SecurityUtils.getSubject();
-            data = !subject.isAuthenticated() ? MultiAgentService.response("AUTH_REQUIRED", "请先登录后使用助手。")
-                : service.chat(message, conversationId, subject, materialCode, operationCode, workOrderCode);
+            if(!subject.isAuthenticated()) data=MultiAgentService.response("AUTH_REQUIRED", "请先登录后使用助手。");
+            else {
+                Map<String,String> filters=new LinkedHashMap<>(parameters);
+                for(String key:Arrays.asList("message","conversationId","materialCode","operationCode","workOrderCode")) filters.remove(key);
+                if(!new HashSet<>(Arrays.asList("materialName","materialStatus","operationName","state","createdFrom","createdTo","page","pageSize")).containsAll(filters.keySet()))
+                    throw new BusinessException("INVALID_INPUT","请求包含不支持的查询条件。");
+                data=filters.isEmpty() ? service.chat(message,conversationId,subject,materialCode,operationCode,workOrderCode)
+                        : service.chat(message,conversationId,subject,materialCode,operationCode,workOrderCode,filters);
+            }
             data = new LinkedHashMap<>(data);
-        } catch (Exception failure) { data = new LinkedHashMap<>(AssistantResponses.queryFailure(failure)); data.put("mode", "multi-agent"); data.put("agentExecuted", false); }
+        } catch (BusinessException invalid) { data=MultiAgentService.response(invalid.getStatus(),invalid.getMessage()); }
+        catch (Exception failure) { data = new LinkedHashMap<>(AssistantResponses.queryFailure(failure)); data.put("mode", "multi-agent"); data.put("agentExecuted", false); }
         HttpStatus status;
         switch (String.valueOf(data.get("status"))) {
             case "AUTH_REQUIRED": status = HttpStatus.UNAUTHORIZED; break;

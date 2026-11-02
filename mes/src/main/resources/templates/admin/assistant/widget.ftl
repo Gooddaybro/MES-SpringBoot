@@ -25,6 +25,13 @@
                 <label for="mes-ai-material-code">物料编码</label><input id="mes-ai-material-code" maxlength="255" autocomplete="off">
                 <label for="mes-ai-operation-code">工序编码</label><input id="mes-ai-operation-code" maxlength="255" autocomplete="off">
                 <label for="mes-ai-work-order-code">工单编号</label><input id="mes-ai-work-order-code" maxlength="64" autocomplete="off">
+                <label for="mes-ai-material-name">物料名称（模糊搜索）</label><input id="mes-ai-material-name" maxlength="100" autocomplete="off">
+                <label for="mes-ai-operation-name">工序名称（模糊搜索）</label><input id="mes-ai-operation-name" maxlength="100" autocomplete="off">
+                <label for="mes-ai-state">工单状态</label><select id="mes-ai-state"><option value="">全部状态</option><option value="CREATED">已创建 / 待开工</option><option value="IN_PROGRESS">进行中</option><option value="COMPLETED">已完成</option><option value="CANCELLED">已取消</option></select>
+                <label for="mes-ai-created-from">创建时间起点（包含）</label><input id="mes-ai-created-from" type="datetime-local">
+                <label for="mes-ai-created-to">创建时间终点（不包含）</label><input id="mes-ai-created-to" type="datetime-local">
+                <label for="mes-ai-page">页码</label><input id="mes-ai-page" type="number" min="1" max="1000" placeholder="默认1">
+                <label for="mes-ai-page-size">每页条数</label><input id="mes-ai-page-size" type="number" min="1" max="50" placeholder="默认20，最多50">
             </details>
             <label for="mes-ai-input">物料编码或问题</label>
             <div class="mes-ai-composer">
